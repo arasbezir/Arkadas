@@ -34,10 +34,12 @@
     background:var(--surface); border-bottom:1px solid var(--line);
   }
   header h1{margin:0; font-size:1.15rem; letter-spacing:.01em}
+  .hdr-right{display:flex; align-items:center; gap:8px}
   header button{
     font:inherit; font-size:.85rem; color:var(--muted); background:none;
     border:1px solid var(--line); border-radius:999px; padding:6px 12px;
   }
+  #call-btn{font-size:1.1rem; padding:4px 12px}
   #list{
     flex:1; min-height:0; overflow-y:auto; padding:16px;
     display:flex; flex-direction:column; gap:8px;
@@ -92,13 +94,34 @@
     background:var(--accent); color:var(--accent-fg);
   }
   #status{font-size:.8rem; color:var(--danger); padding:0 16px 6px; min-height:0}
+  #call-ui{
+    position:fixed; inset:0; z-index:8; background:rgba(0,0,0,.65);
+    display:flex; align-items:center; justify-content:center; padding:24px;
+  }
+  #call-ui[hidden]{display:none}
+  #call-box{
+    width:100%; max-width:320px; background:var(--surface); color:var(--fg);
+    border-radius:20px; padding:24px; text-align:center;
+    display:flex; flex-direction:column; gap:20px;
+  }
+  #call-title{font-size:1.2rem; font-weight:600}
+  #call-actions{display:flex; gap:12px; justify-content:center}
+  #call-actions button{
+    font:inherit; font-weight:600; border:0; border-radius:14px;
+    padding:12px 20px; color:#fff; background:var(--muted);
+  }
+  #call-actions button.ok{background:#1f7a5a}
+  #call-actions button.danger{background:#b3261e}
 </style>
 </head>
 <body>
 
 <header>
   <h1>Arkadaş</h1>
-  <button id="change-name" type="button">İsmim: <span id="my-name"></span></button>
+  <div class="hdr-right">
+    <button id="call-btn" type="button" aria-label="Sesli ara">📞</button>
+    <button id="change-name" type="button">İsmim: <span id="my-name"></span></button>
+  </div>
 </header>
 
 <div id="list" aria-live="polite">
@@ -124,11 +147,19 @@
   </form>
 </div>
 
+<div id="call-ui" hidden>
+  <div id="call-box">
+    <div id="call-title"></div>
+    <div id="call-actions"></div>
+  </div>
+</div>
+<audio id="remote-audio" autoplay playsinline></audio>
+
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js";
 import {
   getFirestore, collection, addDoc, query, orderBy, limit,
-  onSnapshot, serverTimestamp
+  onSnapshot, serverTimestamp, doc, updateDoc, where
 } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js";
 
 const firebaseConfig = {
@@ -294,6 +325,189 @@ function shrink(file){
     img.src = objUrl;
   });
 }
+
+/* ---------- Sesli arama (WebRTC + Firestore) ---------- */
+const RTC_CONFIG = { iceServers: [
+  { urls: "stun:stun.l.google.com:19302" },
+  { urls: "stun:stun1.l.google.com:19302" }
+]};
+let pc = null, localStream = null, callRef = null, callRole = null;
+let unsubs = [];
+const pending = [];
+
+function showCall(title, buttons){
+  $("call-title").textContent = title;
+  const a = $("call-actions");
+  a.textContent = "";
+  for(const b of buttons){
+    const el = document.createElement("button");
+    el.type = "button";
+    el.textContent = b.label;
+    el.className = b.cls || "";
+    el.addEventListener("click", b.fn);
+    a.appendChild(el);
+  }
+  $("call-ui").hidden = false;
+}
+
+function cleanup(){
+  unsubs.forEach((u) => { try{ u(); }catch(e){} });
+  unsubs = [];
+  pending.length = 0;
+  if(pc){ try{ pc.close(); }catch(e){} pc = null; }
+  if(localStream){ localStream.getTracks().forEach((t) => t.stop()); localStream = null; }
+  $("remote-audio").srcObject = null;
+  callRef = null;
+  callRole = null;
+  $("call-ui").hidden = true;
+}
+
+async function hangup(){
+  const r = callRef;
+  cleanup();
+  if(r){
+    try{ await updateDoc(r, { status: "ended" }); }catch(e){}
+  }
+}
+
+async function setupPc(){
+  localStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+  pc = new RTCPeerConnection(RTC_CONFIG);
+  localStream.getTracks().forEach((t) => pc.addTrack(t, localStream));
+  pc.ontrack = (e) => { $("remote-audio").srcObject = e.streams[0]; };
+  pc.onconnectionstatechange = () => {
+    if(!pc) return;
+    if(pc.connectionState === "connected"){
+      statusEl.textContent = "";
+      showCall("Görüşme sürüyor", [{ label: "Kapat", cls: "danger", fn: hangup }]);
+    }
+    if(pc.connectionState === "failed"){
+      statusEl.textContent = "Bağlanılamadı. İkiniz de aynı wifi'da deneyin.";
+      hangup();
+    }
+  };
+}
+
+async function flushCandidates(){
+  if(!pc || !pc.remoteDescription) return;
+  while(pending.length){
+    const c = pending.shift();
+    try{ await pc.addIceCandidate(c); }catch(e){ console.error(e); }
+  }
+}
+
+function listenCandidates(coll){
+  const ref = collection(db, "calls", callRef.id, coll);
+  unsubs.push(onSnapshot(ref, (snap) => {
+    snap.docChanges().forEach((ch) => {
+      if(ch.type === "added") pending.push(ch.doc.data());
+    });
+    flushCandidates();
+  }));
+}
+
+async function startCall(){
+  if(!myName){ showNameScreen(); return; }
+  if(pc) return;
+  statusEl.textContent = "";
+  try{
+    await setupPc();
+    callRole = "caller";
+    callRef = await addDoc(collection(db, "calls"), {
+      callerId: myId, callerName: myName, status: "preparing", ts: Date.now()
+    });
+    const myRef = callRef;
+    pc.onicecandidate = (e) => {
+      if(e.candidate && callRef){
+        addDoc(collection(db, "calls", callRef.id, "callerCandidates"), e.candidate.toJSON());
+      }
+    };
+    const offer = await pc.createOffer();
+    await pc.setLocalDescription(offer);
+    await updateDoc(callRef, {
+      offer: { type: offer.type, sdp: offer.sdp }, status: "ringing", ts: Date.now()
+    });
+    showCall("Aranıyor…", [{ label: "İptal", cls: "danger", fn: hangup }]);
+    unsubs.push(onSnapshot(callRef, async (s) => {
+      const d = s.data();
+      if(!d || !pc) return;
+      if(d.answer && !pc.remoteDescription){
+        await pc.setRemoteDescription(d.answer);
+        flushCandidates();
+      }
+      if(d.status === "ended"){ cleanup(); }
+    }));
+    listenCandidates("calleeCandidates");
+    fetch("https://ntfy.sh/arkadas-f3e00-x7q2m9k4p8", {
+      method: "POST",
+      body: myName + " arıyor 📞",
+      headers: { "Title": "Arkadas", "Priority": "urgent", "Click": "https://arasbezir.github.io/Arkadas/Arkadas.html" }
+    }).catch(() => {});
+    setTimeout(() => {
+      if(callRef === myRef && pc && pc.connectionState !== "connected"){
+        statusEl.textContent = "Açan olmadı.";
+        hangup();
+      }
+    }, 45000);
+  }catch(err){
+    console.error(err);
+    statusEl.textContent = "Arama başlatılamadı. Mikrofon iznini kontrol et.";
+    cleanup();
+  }
+}
+
+async function answerCall(d){
+  try{
+    await setupPc();
+    pc.onicecandidate = (e) => {
+      if(e.candidate && callRef){
+        addDoc(collection(db, "calls", callRef.id, "calleeCandidates"), e.candidate.toJSON());
+      }
+    };
+    listenCandidates("callerCandidates");
+    await pc.setRemoteDescription(d.offer);
+    flushCandidates();
+    const ans = await pc.createAnswer();
+    await pc.setLocalDescription(ans);
+    await updateDoc(callRef, {
+      answer: { type: ans.type, sdp: ans.sdp }, status: "active"
+    });
+    showCall("Bağlanıyor…", [{ label: "Kapat", cls: "danger", fn: hangup }]);
+  }catch(err){
+    console.error(err);
+    statusEl.textContent = "Cevaplanamadı. Mikrofon iznini kontrol et.";
+    cleanup();
+  }
+}
+
+function incoming(id, d){
+  callRef = doc(db, "calls", id);
+  callRole = "callee";
+  showCall((d.callerName || "Biri") + " arıyor…", [
+    { label: "Cevapla", cls: "ok", fn: () => answerCall(d) },
+    { label: "Reddet", cls: "danger", fn: () => cleanup() }
+  ]);
+  unsubs.push(onSnapshot(callRef, (s) => {
+    const x = s.data();
+    if(!x) return;
+    if(x.status === "ended" && callRole === "callee"){ cleanup(); }
+    if(x.status === "active" && !pc){ cleanup(); }
+  }));
+}
+
+$("call-btn").addEventListener("click", startCall);
+
+const ringQ = query(collection(db, "calls"), where("status", "==", "ringing"));
+onSnapshot(ringQ, (snap) => {
+  snap.docChanges().forEach((ch) => {
+    if(ch.type !== "added") return;
+    const d = ch.doc.data();
+    if(d.callerId === myId) return;
+    if(Date.now() - d.ts > 60000) return;
+    if(pc || callRole) return;
+    incoming(ch.doc.id, d);
+  });
+}, (err) => { console.error(err); });
 </script>
 </body>
 </html>
