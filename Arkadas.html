@@ -2,164 +2,253 @@
 <html lang="tr">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, interactive-widget=resizes-content">
 <meta name="theme-color" content="#1f7a5a">
 <title>Arkadaş</title>
 <style>
+:root{
+  --bg:#f2f5f1; --surface:#ffffff; --fg:#18211c; --muted:#6a766f; --line:#dce3de;
+  --accent:#1f7a5a; --accent-fg:#ffffff; --head:#1f7a5a; --head-fg:#ffffff;
+  --mine:#d3f0e0; --mine-fg:#10261b; --theirs:#ffffff; --chatbg:#e8eee8;
+  --danger:#c0392b;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark){
   :root{
-    --bg:#f2f5f1; --surface:#ffffff; --fg:#18211c; --muted:#6a766f;
-    --accent:#1f7a5a; --accent-fg:#ffffff; --mine:#1f7a5a; --mine-fg:#ffffff;
-    --theirs:#ffffff; --line:#dce3de; --danger:#b3261e;
-    color-scheme: light;
+    --bg:#0f1512; --surface:#18211c; --fg:#e8efea; --muted:#92a199; --line:#2a3731;
+    --accent:#34b583; --accent-fg:#07130d; --head:#17382d; --head-fg:#ffffff;
+    --mine:#1f5f48; --mine-fg:#ffffff; --theirs:#1f2b25; --chatbg:#0c110f;
+    --danger:#e57368;
+    color-scheme: dark;
   }
-  @media (prefers-color-scheme: dark){
-    :root:not([data-theme="light"]){
-      --bg:#101613; --surface:#18211c; --fg:#e8efea; --muted:#92a199;
-      --accent:#4cc79a; --accent-fg:#07130d; --mine:#2a8a68; --mine-fg:#ffffff;
-      --theirs:#1d2822; --line:#2a3731; --danger:#f2b8b5;
-      color-scheme: dark;
-    }
-  }
-  *{box-sizing:border-box}
-  html,body{height:100%;margin:0}
-  body{
-    background:var(--bg); color:var(--fg);
-    font:16px/1.4 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
-    display:flex; flex-direction:column;
-    -webkit-text-size-adjust:100%;
-  }
-  header{
-    display:flex; align-items:center; justify-content:space-between; gap:12px;
-    padding:12px 16px; padding-top:calc(12px + env(safe-area-inset-top,0px));
-    background:var(--surface); border-bottom:1px solid var(--line);
-  }
-  header h1{margin:0; font-size:1.15rem; letter-spacing:.01em}
-  .hdr-right{display:flex; align-items:center; gap:8px}
-  header button{
-    font:inherit; font-size:.85rem; color:var(--muted); background:none;
-    border:1px solid var(--line); border-radius:999px; padding:6px 12px;
-  }
-  #call-btn{font-size:1.1rem; padding:4px 12px}
-  #list{
-    flex:1; min-height:0; overflow-y:auto; padding:16px;
-    display:flex; flex-direction:column; gap:8px;
-  }
-  .empty{margin:auto; color:var(--muted); text-align:center; max-width:28ch}
-  .msg{max-width:82%; display:flex; flex-direction:column; gap:2px}
-  .msg.mine{align-self:flex-end; align-items:flex-end}
-  .msg.theirs{align-self:flex-start; align-items:flex-start}
-  .who{font-size:.75rem; color:var(--muted); padding:0 6px}
-  .bubble{
-    padding:8px 12px; border-radius:18px; overflow-wrap:anywhere; white-space:pre-wrap;
-    background:var(--theirs); border:1px solid var(--line);
-  }
-  .mine .bubble{background:var(--mine); color:var(--mine-fg); border-color:transparent; border-bottom-right-radius:6px}
-  .theirs .bubble{border-bottom-left-radius:6px}
-  .bubble img{display:block; max-width:100%; width:260px; height:auto; border-radius:12px}
-  .bubble.photo{padding:4px}
-  .time{font-size:.7rem; color:var(--muted); padding:0 6px}
-  form{
-    display:flex; align-items:flex-end; gap:8px;
-    padding:10px 12px; padding-bottom:calc(10px + env(safe-area-inset-bottom,0px));
-    padding-left:max(12px, env(safe-area-inset-left,0px));
-    padding-right:max(12px, env(safe-area-inset-right,0px));
-    background:var(--surface); border-top:1px solid var(--line);
-  }
-  textarea{
-    flex:1; min-width:0; resize:none; max-height:120px;
-    font:inherit; color:var(--fg); background:var(--bg);
-    border:1px solid var(--line); border-radius:20px; padding:10px 14px;
-  }
-  .icon-btn, .send{
-    flex:none; height:42px; border-radius:21px; border:0; font:inherit; cursor:pointer;
-  }
-  .icon-btn{width:42px; background:var(--bg); color:var(--fg); border:1px solid var(--line); font-size:1.2rem}
-  .send{padding:0 18px; background:var(--accent); color:var(--accent-fg); font-weight:600}
-  button:focus-visible, textarea:focus-visible, input:focus-visible{outline:2px solid var(--accent); outline-offset:2px}
-  #hidden-file, #cam-file{display:none}
-  #name-screen{
-    position:fixed; inset:0; z-index:5; background:var(--bg);
-    display:flex; align-items:center; justify-content:center; padding:24px;
-  }
-  #name-screen[hidden]{display:none}
-  #name-box{width:100%; max-width:340px; display:flex; flex-direction:column; gap:12px}
-  #name-box h2{margin:0; font-size:1.5rem}
-  #name-box p{margin:0; color:var(--muted)}
-  #name-box input{
-    font:inherit; color:var(--fg); background:var(--surface);
-    border:1px solid var(--line); border-radius:12px; padding:12px 14px;
-  }
-  #name-box button{
-    font:inherit; font-weight:600; border:0; border-radius:12px; padding:12px;
-    background:var(--accent); color:var(--accent-fg);
-  }
-  #status{font-size:.8rem; color:var(--danger); padding:0 16px 6px; min-height:0}
-  #call-ui{
-    position:fixed; inset:0; z-index:8; background:rgba(0,0,0,.65);
-    display:flex; align-items:center; justify-content:center; padding:24px;
-  }
-  #call-ui[hidden]{display:none}
-  #call-box{
-    width:100%; max-width:320px; background:var(--surface); color:var(--fg);
-    border-radius:20px; padding:24px; text-align:center;
-    display:flex; flex-direction:column; gap:20px;
-  }
-  #call-title{font-size:1.2rem; font-weight:600}
-  #call-actions{display:flex; gap:12px; justify-content:center}
-  #call-actions button{
-    font:inherit; font-weight:600; border:0; border-radius:14px;
-    padding:12px 20px; color:#fff; background:var(--muted);
-  }
-  #call-actions button.ok{background:#1f7a5a}
-  #call-actions button.danger{background:#b3261e}
+}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+html,body{height:100%;margin:0}
+body{
+  background:var(--bg); color:var(--fg);
+  font:16px/1.4 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  display:flex; flex-direction:column; -webkit-text-size-adjust:100%; overscroll-behavior:none;
+}
+button{font:inherit; color:inherit; cursor:pointer; -webkit-tap-highlight-color:transparent}
+.view{display:none; flex:1; min-height:0; flex-direction:column}
+.view.on{display:flex}
+.top{
+  display:flex; align-items:center; gap:8px; padding:10px 12px;
+  padding-top:calc(10px + env(safe-area-inset-top,0px));
+  background:var(--head); color:var(--head-fg);
+}
+.top h1{margin:0; font-size:1.2rem; flex:1; letter-spacing:.01em}
+.ghost{background:none; border:0; color:var(--head-fg); font-size:1.3rem; padding:6px 8px; border-radius:10px}
+.avatar{
+  display:inline-flex; align-items:center; justify-content:center; flex:none;
+  width:44px; height:44px; border-radius:50%; color:#fff; font-weight:700; font-size:1.1rem;
+  border:0; padding:0;
+}
+.avatar.sm{width:38px; height:38px; font-size:1rem}
+.avatar.lg{width:84px; height:84px; font-size:2rem}
+.tabs{display:flex; background:var(--surface); border-bottom:1px solid var(--line)}
+.tabs button{
+  flex:1; background:none; border:0; padding:12px; color:var(--muted); font-weight:600;
+  border-bottom:3px solid transparent;
+}
+.tabs button.on{color:var(--accent); border-bottom-color:var(--accent)}
+.list{flex:1; min-height:0; overflow-y:auto; display:flex; flex-direction:column}
+.row{
+  display:flex; align-items:center; gap:12px; padding:12px 14px;
+  background:var(--surface); border-bottom:1px solid var(--line);
+}
+.row-mid{flex:1; min-width:0}
+.row-name{font-weight:600}
+.row-sub{font-size:.85rem; color:var(--muted); white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+.row-sub.bold{color:var(--fg); font-weight:600}
+.row-end{display:flex; flex-direction:column; align-items:flex-end; gap:6px; font-size:.75rem; color:var(--muted)}
+.dot{width:10px; height:10px; border-radius:50%; background:var(--accent)}
+.pill{border:0; background:var(--accent); color:var(--accent-fg); padding:8px 16px; border-radius:999px; font-weight:600}
+.empty{margin:auto; padding:32px 24px; color:var(--muted); text-align:center; max-width:32ch}
+.peer{
+  flex:1; min-width:0; display:flex; align-items:center; gap:10px; background:none; border:0;
+  color:var(--head-fg); text-align:left; padding:0;
+}
+.peer-txt{display:flex; flex-direction:column; min-width:0}
+.peer-txt b{font-size:1.02rem; white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+.peer-txt small{font-size:.75rem; opacity:.85}
+#msgs{
+  flex:1; min-height:0; overflow-y:auto; padding:12px;
+  display:flex; flex-direction:column; gap:6px; background:var(--chatbg);
+}
+.msg{max-width:82%; display:flex; flex-direction:column; gap:2px}
+.msg.mine{align-self:flex-end; align-items:flex-end}
+.msg.theirs{align-self:flex-start; align-items:flex-start}
+.bubble{
+  padding:8px 12px; border-radius:16px; overflow-wrap:anywhere; white-space:pre-wrap;
+  background:var(--theirs); border:1px solid var(--line);
+}
+.mine .bubble{background:var(--mine); color:var(--mine-fg); border-color:transparent; border-bottom-right-radius:4px}
+.theirs .bubble{border-bottom-left-radius:4px}
+.bubble.gone{font-style:italic; color:var(--muted); background:transparent}
+.bubble.photo{padding:4px}
+.bubble img{display:block; max-width:100%; width:240px; height:auto; border-radius:12px}
+.time{font-size:.7rem; color:var(--muted); padding:0 4px}
+.del{
+  display:none; background:var(--surface); border:1px solid var(--line); color:var(--danger);
+  border-radius:999px; padding:4px 10px; font-size:.8rem;
+}
+.msg.sel .del{display:inline-block}
+#typing{display:none; align-items:center; gap:6px; padding:4px 16px 6px; font-size:.8rem; color:var(--muted); background:var(--chatbg)}
+#typing.on{display:flex}
+.dots{display:inline-flex; gap:3px}
+.dots i{width:6px; height:6px; border-radius:50%; background:var(--muted); animation:tdot 1.2s infinite ease-in-out}
+.dots i:nth-child(2){animation-delay:.2s}
+.dots i:nth-child(3){animation-delay:.4s}
+@keyframes tdot{0%,60%,100%{opacity:.3; transform:translateY(0)}30%{opacity:1; transform:translateY(-3px)}}
+#composer{
+  display:flex; align-items:flex-end; gap:8px; padding:8px 10px;
+  padding-bottom:calc(8px + env(safe-area-inset-bottom,0px));
+  background:var(--surface); border-top:1px solid var(--line);
+}
+#text{
+  flex:1; min-width:0; resize:none; max-height:120px; font:inherit; color:var(--fg);
+  background:var(--bg); border:1px solid var(--line); border-radius:20px; padding:10px 14px;
+}
+.icon-btn,.send{flex:none; height:42px; border-radius:21px; border:0}
+.icon-btn{width:42px; background:var(--bg); border:1px solid var(--line); font-size:1.15rem}
+.send{padding:0 18px; background:var(--accent); color:var(--accent-fg); font-weight:600}
+.overlay{position:fixed; inset:0; z-index:10; background:rgba(0,0,0,.45); display:flex; align-items:flex-end; justify-content:center}
+.overlay.dark{background:rgba(0,0,0,.92); align-items:center; z-index:15}
+.overlay.dark img{max-width:100%; max-height:100%}
+.sheet{
+  width:100%; max-width:480px; background:var(--surface); border-radius:20px 20px 0 0;
+  padding:20px 18px; padding-bottom:calc(20px + env(safe-area-inset-bottom,0px));
+  max-height:88%; overflow-y:auto;
+}
+.sheet-in{display:flex; flex-direction:column; align-items:center; gap:12px; text-align:center}
+.sheet h2{margin:0}
+.sub{color:var(--muted); font-size:.85rem}
+.btn{
+  display:block; width:100%; border:0; border-radius:12px; padding:12px; background:var(--accent);
+  color:var(--accent-fg); font-weight:600; text-align:center; text-decoration:none;
+}
+.btn.alt{background:var(--bg); color:var(--fg); border:1px solid var(--line)}
+.btn.bad{background:none; color:var(--danger); border:1px solid var(--line)}
+.sheet input{
+  width:100%; font:inherit; color:var(--fg); background:var(--bg); border:1px solid var(--line);
+  border-radius:12px; padding:12px 14px; text-align:center;
+}
+.code{
+  width:100%; word-break:break-all; background:var(--bg); border:1px solid var(--line);
+  border-radius:10px; padding:8px; font-family:ui-monospace,monospace; font-size:.85rem;
+}
+.help{font-size:.8rem; color:var(--muted); text-align:left; width:100%}
+#toast{
+  position:fixed; left:50%; bottom:calc(90px + env(safe-area-inset-bottom,0px)); transform:translateX(-50%);
+  z-index:40; background:#222; color:#fff; padding:10px 16px; border-radius:12px; font-size:.9rem;
+  max-width:90%; text-align:center;
+}
+#name-screen{
+  position:fixed; inset:0; z-index:30; background:var(--bg);
+  display:flex; align-items:center; justify-content:center; padding:24px;
+}
+#name-box{width:100%; max-width:340px; display:flex; flex-direction:column; gap:12px}
+#name-box h2{margin:0; font-size:1.5rem}
+#name-box p{margin:0; color:var(--muted)}
+#name-box input{
+  font:inherit; color:var(--fg); background:var(--surface); border:1px solid var(--line);
+  border-radius:12px; padding:12px 14px;
+}
+#name-box button{font-weight:600; border:0; border-radius:12px; padding:12px; background:var(--accent); color:var(--accent-fg)}
+.callui{
+  position:fixed; inset:0; z-index:20; background:#0b1210; color:#fff;
+  display:flex; flex-direction:column; align-items:center; justify-content:space-between;
+  padding:48px 24px calc(36px + env(safe-area-inset-bottom,0px));
+}
+.callui video{position:absolute; display:none; background:#000}
+#rv{inset:0; width:100%; height:100%; object-fit:cover}
+#lv{
+  right:12px; top:calc(12px + env(safe-area-inset-top,0px)); width:96px; height:136px;
+  object-fit:cover; border-radius:12px; transform:scaleX(-1); z-index:2;
+}
+.callui.video video{display:block}
+.call-info{position:relative; z-index:1; display:flex; flex-direction:column; align-items:center; gap:10px; margin-top:40px}
+.callui.video.connected #c-av, .callui.video.connected #c-name{display:none}
+#c-name{font-size:1.6rem; font-weight:700}
+#c-state{opacity:.9; text-shadow:0 1px 4px #000}
+.call-actions{position:relative; z-index:1; display:flex; gap:22px}
+.cbtn{display:flex; flex-direction:column; align-items:center; gap:6px; border:0; background:none; color:#fff; font-size:.8rem}
+.ci{
+  width:64px; height:64px; border-radius:50%; background:#33403a;
+  display:flex; align-items:center; justify-content:center; font-size:1.6rem;
+}
+.cbtn.danger .ci{background:#c0392b}
+.cbtn.ok .ci{background:#1f9d6b}
+.cbtn.off .ci{opacity:.45}
 </style>
 </head>
 <body>
 
-<header>
-  <h1>Arkadaş</h1>
-  <div class="hdr-right">
-    <button id="call-btn" type="button" aria-label="Sesli ara">📞</button>
-    <button id="change-name" type="button">İsmim: <span id="my-name"></span></button>
-  </div>
-</header>
-
-<div id="list" aria-live="polite">
-  <div class="empty" id="empty">Henüz mesaj yok. İlk mesajı sen yaz.</div>
+<div id="home" class="view on">
+  <header class="top">
+    <h1>Arkadaş</h1>
+    <button id="me-btn" class="avatar sm" type="button" aria-label="Profilim"></button>
+  </header>
+  <nav class="tabs">
+    <button id="tab-chats" type="button" class="on">Sohbetler</button>
+    <button id="tab-add" type="button">Ekle</button>
+  </nav>
+  <div id="home-list" class="list"></div>
 </div>
-<div id="status" role="status"></div>
 
-<form id="composer" autocomplete="off">
-  <input type="file" id="hidden-file" accept="image/*">
-  <input type="file" id="cam-file" accept="image/*" capture="environment">
-  <button class="icon-btn" id="photo-btn" type="button" aria-label="Galeriden fotoğraf gönder">🖼️</button>
-  <button class="icon-btn" id="cam-btn" type="button" aria-label="Fotoğraf çek">📷</button>
-  <textarea id="text" rows="1" placeholder="Mesaj yaz" aria-label="Mesaj"></textarea>
-  <button class="send" type="submit">Gönder</button>
-</form>
+<div id="chat" class="view">
+  <header class="top">
+    <button id="back" class="ghost" type="button" aria-label="Geri">←</button>
+    <button id="peer" class="peer" type="button">
+      <span id="peer-av" class="avatar sm"></span>
+      <span class="peer-txt"><b id="peer-name"></b><small id="peer-status"></small></span>
+    </button>
+    <button id="vcall" class="ghost" type="button" aria-label="Görüntülü ara">📹</button>
+    <button id="acall" class="ghost" type="button" aria-label="Sesli ara">📞</button>
+  </header>
+  <div id="msgs"></div>
+  <div id="typing"><span>yazıyor</span><span class="dots"><i></i><i></i><i></i></span></div>
+  <form id="composer" autocomplete="off">
+    <input type="file" id="file-gal" accept="image/*" hidden>
+    <input type="file" id="file-cam" accept="image/*" capture="environment" hidden>
+    <button class="icon-btn" id="b-cam" type="button" aria-label="Fotoğraf çek">📷</button>
+    <button class="icon-btn" id="b-gal" type="button" aria-label="Galeriden gönder">🖼️</button>
+    <textarea id="text" rows="1" placeholder="Mesaj yaz" aria-label="Mesaj"></textarea>
+    <button class="send" type="submit">Gönder</button>
+  </form>
+</div>
+
+<div id="sheet" class="overlay" hidden><div class="sheet"><div id="sheet-body" class="sheet-in"></div></div></div>
+<div id="viewer" class="overlay dark" hidden><img id="viewer-img" alt="Fotoğraf"></div>
+<div id="toast" hidden></div>
 
 <div id="name-screen" hidden>
   <form id="name-box">
     <h2>Adın ne?</h2>
-    <p>Arkadaşların mesajlarında bu adı görecek.</p>
+    <p>Arkadaşların seni bu adla görecek.</p>
     <input id="name-input" maxlength="20" placeholder="Örn. Aras" aria-label="Adın" required>
     <button type="submit">Başla</button>
   </form>
 </div>
 
-<div id="call-ui" hidden>
-  <div id="call-box">
-    <div id="call-title"></div>
-    <div id="call-actions"></div>
+<div id="call" class="callui" hidden>
+  <video id="rv" autoplay playsinline></video>
+  <video id="lv" autoplay playsinline muted></video>
+  <div class="call-info">
+    <div id="c-av" class="avatar lg"></div>
+    <div id="c-name"></div>
+    <div id="c-state"></div>
   </div>
+  <div id="c-actions" class="call-actions"></div>
 </div>
-<audio id="remote-audio" autoplay playsinline></audio>
 
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js";
 import {
-  getFirestore, collection, addDoc, query, orderBy, limit,
-  onSnapshot, serverTimestamp, doc, updateDoc, where
+  getFirestore, collection, doc, addDoc, setDoc, updateDoc, onSnapshot, query,
+  orderBy, limit, where, serverTimestamp, arrayUnion, arrayRemove
 } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js";
 
 const firebaseConfig = {
@@ -170,23 +259,91 @@ const firebaseConfig = {
   messagingSenderId: "253421208511",
   appId: "1:253421208511:web:26a6789da8c999d829970a"
 };
-
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 
+/* ---------- yardımcılar ---------- */
 const $ = (id) => document.getElementById(id);
-const listEl = $("list"), emptyEl = $("empty"), statusEl = $("status");
+
+function h(tag, props, ...kids){
+  const el = document.createElement(tag);
+  for(const [k, v] of Object.entries(props || {})){
+    if(v == null || v === false) continue;
+    if(k === "class") el.className = v;
+    else if(k === "text") el.textContent = v;
+    else if(k.startsWith("on")) el.addEventListener(k.slice(2), v);
+    else el.setAttribute(k, v === true ? "" : v);
+  }
+  for(const kid of kids.flat()){ if(kid != null) el.append(kid); }
+  return el;
+}
 
 function store(key, value){
   try{ if(value === undefined) return localStorage.getItem(key); localStorage.setItem(key, value); }
   catch(e){ return null; }
 }
 
+let toastT = null;
+function toast(msg, ms){
+  const t = $("toast");
+  t.textContent = msg; t.hidden = false;
+  clearTimeout(toastT);
+  toastT = setTimeout(() => { t.hidden = true; }, ms || 4000);
+}
+
+function colorOf(id){
+  let x = 0;
+  for(const ch of String(id)) x = (x * 31 + ch.charCodeAt(0)) >>> 0;
+  return "hsl(" + (x % 360) + " 50% 40%)";
+}
+function applyAvatar(el, id, name){
+  el.style.background = colorOf(id);
+  el.textContent = (name || "?").trim().charAt(0).toUpperCase() || "?";
+}
+function avatar(id, name, cls){
+  const el = h("span", { class: "avatar " + (cls || "") });
+  applyAvatar(el, id, name);
+  return el;
+}
+
+function fmtTime(x){
+  if(!x) return "";
+  const d = x instanceof Date ? x : new Date(x);
+  return d.toLocaleTimeString("tr-TR", { hour: "2-digit", minute: "2-digit" });
+}
+function presence(u){
+  if(!u || !u.lastSeen) return "";
+  if(Date.now() - u.lastSeen < 100000) return "çevrimiçi";
+  const d = new Date(u.lastSeen);
+  const same = d.toDateString() === new Date().toDateString();
+  const day = same ? "" : d.toLocaleDateString("tr-TR", { day: "numeric", month: "short" }) + " ";
+  return "son görülme " + day + fmtTime(d);
+}
+
+/* ---------- kimlik ---------- */
 let myName = store("ark_name") || "";
 let myId = store("ark_id");
 if(!myId){
   myId = Math.random().toString(36).slice(2) + Date.now().toString(36);
   store("ark_id", myId);
+}
+const chatIdOf = (a, b) => [a, b].sort().join("_");
+const topicOf = (id) => "arkadas-" + String(id).slice(0, 12);
+const userRef = (id) => doc(db, "users", id);
+
+/* ---------- durum ---------- */
+let users = {}, chats = {}, tab = "chats";
+let peerId = null, unsubMsgs = null, msgDocs = [], firstRender = true, marked = {};
+let lastPing = 0, idleT = null;
+
+async function saveMe(quiet){
+  if(!myName) return;
+  try{
+    await setDoc(userRef(myId), { name: myName, lastSeen: Date.now() }, { merge: true });
+  }catch(e){
+    console.error(e);
+    if(!quiet) toast("Bağlantı sorunu. İnterneti ve Firestore izinlerini kontrol et.");
+  }
 }
 
 function showNameScreen(){
@@ -194,90 +351,321 @@ function showNameScreen(){
   $("name-screen").hidden = false;
   $("name-input").focus();
 }
-function refreshName(){ $("my-name").textContent = myName; }
-
 $("name-box").addEventListener("submit", (e) => {
   e.preventDefault();
   const v = $("name-input").value.trim();
   if(!v) return;
   myName = v;
   store("ark_name", v);
-  refreshName();
   $("name-screen").hidden = true;
+  applyAvatar($("me-btn"), myId, myName);
+  saveMe();
 });
-$("change-name").addEventListener("click", showNameScreen);
 
-if(myName){ refreshName(); } else { showNameScreen(); }
+/* ---------- dinleyiciler ---------- */
+onSnapshot(collection(db, "users"), (snap) => {
+  users = {};
+  snap.forEach((s) => { users[s.id] = s.data(); });
+  renderHome();
+  refreshPeer();
+}, (err) => { console.error(err); toast("Kişiler yüklenemedi. Firestore izinlerini kontrol et."); });
 
-function fmtTime(date){
-  if(!date) return "";
-  return date.toLocaleTimeString("tr-TR", {hour:"2-digit", minute:"2-digit"});
+onSnapshot(query(collection(db, "chats"), where("members", "array-contains", myId)), (snap) => {
+  chats = {};
+  snap.forEach((s) => { chats[s.id] = s.data(); });
+  renderHome();
+  updateTyping();
+  markRead();
+}, (err) => { console.error(err); });
+
+/* ---------- ana ekran ---------- */
+const friendsList = () => (users[myId] && users[myId].friends) || [];
+
+$("tab-chats").addEventListener("click", () => { tab = "chats"; renderHome(); });
+$("tab-add").addEventListener("click", () => { tab = "add"; renderHome(); });
+$("me-btn").addEventListener("click", () => openProfile(myId));
+
+function renderHome(){
+  $("tab-chats").classList.toggle("on", tab === "chats");
+  $("tab-add").classList.toggle("on", tab === "add");
+  const box = $("home-list");
+  box.textContent = "";
+  const fr = friendsList().filter((id) => users[id]);
+
+  if(tab === "chats"){
+    if(!fr.length){
+      box.append(h("div", { class: "empty", text: "Henüz arkadaşın yok. “Ekle” sekmesinden arkadaşlarını ekle." }));
+      return;
+    }
+    const rows = fr.map((id) => ({ id, u: users[id], c: chats[chatIdOf(myId, id)] || {} }));
+    rows.sort((a, b) =>
+      (b.c.lastTs || 0) - (a.c.lastTs || 0) ||
+      (a.u.name || "").localeCompare(b.u.name || "", "tr"));
+    for(const r of rows){
+      const unread = r.c.lastTs && r.c.lastFrom !== myId &&
+        r.c.lastTs > ((r.c.read && r.c.read[myId]) || 0);
+      const av = avatar(r.id, r.u.name);
+      av.addEventListener("click", (e) => { e.stopPropagation(); openProfile(r.id); });
+      const preview = r.c.lastText
+        ? (r.c.lastFrom === myId ? "Sen: " : "") + r.c.lastText
+        : "Mesaj yazmak için dokun";
+      box.append(h("div", { class: "row", role: "button", onclick: () => openChat(r.id) },
+        av,
+        h("div", { class: "row-mid" },
+          h("div", { class: "row-name", text: r.u.name || "Biri" }),
+          h("div", { class: "row-sub" + (unread ? " bold" : ""), text: preview })),
+        h("div", { class: "row-end" },
+          h("div", { text: r.c.lastTs ? fmtTime(r.c.lastTs) : "" }),
+          unread ? h("span", { class: "dot" }) : null)));
+    }
+  } else {
+    const others = Object.keys(users).filter((id) => id !== myId && !fr.includes(id));
+    if(!others.length){
+      box.append(h("div", { class: "empty", text: "Eklenecek kimse yok. Arkadaşların siteyi açıp adını yazınca burada görünür." }));
+      return;
+    }
+    for(const id of others){
+      const u = users[id];
+      box.append(h("div", { class: "row" },
+        avatar(id, u.name),
+        h("div", { class: "row-mid" },
+          h("div", { class: "row-name", text: u.name || "Biri" }),
+          h("div", { class: "row-sub", text: presence(u) })),
+        h("button", { class: "pill", type: "button", text: "Ekle", onclick: () => addFriend(id) })));
+    }
+  }
 }
 
-function render(docs){
-  listEl.querySelectorAll(".msg").forEach(n => n.remove());
-  emptyEl.hidden = docs.length > 0;
-  const nearBottom = listEl.scrollHeight - listEl.scrollTop - listEl.clientHeight < 120;
-  for(const d of docs){
-    const mine = d.uid === myId;
-    const wrap = document.createElement("div");
-    wrap.className = "msg " + (mine ? "mine" : "theirs");
-    if(!mine){
-      const who = document.createElement("div");
-      who.className = "who"; who.textContent = d.name || "Biri";
-      wrap.appendChild(who);
+async function addFriend(id){
+  try{
+    await setDoc(userRef(myId), { friends: arrayUnion(id) }, { merge: true });
+    await setDoc(userRef(id), { friends: arrayUnion(myId) }, { merge: true });
+    toast((users[id] && users[id].name || "Arkadaş") + " eklendi");
+    tab = "chats";
+    renderHome();
+  }catch(e){ console.error(e); toast("Eklenemedi. Tekrar dene."); }
+}
+async function removeFriend(id){
+  if(!confirm("Arkadaşlıktan çıkarılsın mı?")) return;
+  try{
+    await setDoc(userRef(myId), { friends: arrayRemove(id) }, { merge: true });
+    await setDoc(userRef(id), { friends: arrayRemove(myId) }, { merge: true });
+    closeSheet();
+    if(peerId === id) history.back();
+  }catch(e){ console.error(e); toast("İşlem yapılamadı."); }
+}
+
+/* ---------- profil ---------- */
+function closeSheet(){ $("sheet").hidden = true; }
+$("sheet").addEventListener("click", (e) => { if(e.target.id === "sheet") closeSheet(); });
+
+function openProfile(id){
+  const body = $("sheet-body");
+  body.textContent = "";
+  if(id === myId){
+    const nameIn = h("input", { maxlength: "20", "aria-label": "Adın" });
+    nameIn.value = myName;
+    const topic = topicOf(myId);
+    body.append(
+      avatar(myId, myName, "lg"),
+      h("h2", { text: "Profilim" }),
+      nameIn,
+      h("button", { class: "btn", type: "button", text: "Kaydet", onclick: () => {
+        const v = nameIn.value.trim();
+        if(!v) return;
+        myName = v; store("ark_name", v); saveMe();
+        applyAvatar($("me-btn"), myId, myName);
+        closeSheet();
+      }}),
+      h("div", { class: "sub", text: "Sayfa kapalıyken aranmak için bildirim kanalın:" }),
+      h("div", { class: "code", text: topic }),
+      h("button", { class: "btn alt", type: "button", text: "Kanalı kopyala", onclick: () => {
+        navigator.clipboard.writeText(topic).then(() => toast("Kopyalandı")).catch(() => toast("Kopyalanamadı"));
+      }}),
+      h("a", { class: "btn alt", href: "ntfy://ntfy.sh/" + topic, text: "ntfy'de aç" }),
+      h("div", { class: "help", text: "1) ntfy uygulamasını kur. 2) Bu kanala abone ol (+ butonu, ya da yukarıdaki düğme). 3) Bildirim iznini ver, pil tasarrufundan çıkar. Biri seni arayınca bildirim gelir, dokununca site açılır." })
+    );
+  } else {
+    const u = users[id] || {};
+    const isFr = friendsList().includes(id);
+    body.append(
+      avatar(id, u.name, "lg"),
+      h("h2", { text: u.name || "Biri" }),
+      h("div", { class: "sub", text: presence(u) })
+    );
+    if(isFr){
+      body.append(
+        h("button", { class: "btn", type: "button", text: "💬 Mesaj", onclick: () => {
+          if(peerId === id) closeSheet(); else openChat(id);
+        }}),
+        h("button", { class: "btn alt", type: "button", text: "📞 Sesli ara", onclick: () => startCall(id, false) }),
+        h("button", { class: "btn alt", type: "button", text: "📹 Görüntülü ara", onclick: () => startCall(id, true) }),
+        h("button", { class: "btn bad", type: "button", text: "Arkadaşlıktan çıkar", onclick: () => removeFriend(id) })
+      );
+    } else {
+      body.append(h("button", { class: "btn", type: "button", text: "Arkadaş ekle", onclick: () => { addFriend(id); closeSheet(); } }));
     }
-    const bubble = document.createElement("div");
-    bubble.className = "bubble";
-    if(typeof d.image === "string" && d.image.startsWith("data:image/jpeg")){
+  }
+  $("sheet").hidden = false;
+}
+
+/* ---------- sohbet ---------- */
+function refreshPeer(){
+  if(!peerId) return;
+  const u = users[peerId] || {};
+  $("peer-name").textContent = u.name || "Biri";
+  $("peer-status").textContent = presence(u);
+  applyAvatar($("peer-av"), peerId, u.name);
+}
+
+function openChat(id){
+  closeSheet();
+  if(peerId) return;
+  peerId = id; firstRender = true; msgDocs = [];
+  $("home").classList.remove("on");
+  $("chat").classList.add("on");
+  history.pushState({ chat: id }, "");
+  refreshPeer();
+  $("msgs").textContent = "";
+  const cid = chatIdOf(myId, id);
+  setDoc(doc(db, "chats", cid), { members: [myId, id] }, { merge: true }).catch(() => {});
+  const q = query(collection(db, "chats", cid, "messages"), orderBy("createdAt", "desc"), limit(50));
+  unsubMsgs = onSnapshot(q, (snap) => {
+    msgDocs = snap.docs.map((s) => {
+      const d = s.data({ serverTimestamps: "estimate" });
+      return { ...d, id: s.id, date: d.createdAt ? d.createdAt.toDate() : null };
+    }).reverse();
+    renderMessages();
+    markRead();
+  }, (err) => { console.error(err); toast("Mesajlar yüklenemedi."); });
+  updateTyping();
+}
+
+function closeChatView(){
+  stopTyping();
+  if(unsubMsgs){ unsubMsgs(); unsubMsgs = null; }
+  peerId = null; msgDocs = [];
+  $("typing").classList.remove("on");
+  $("chat").classList.remove("on");
+  $("home").classList.add("on");
+  renderHome();
+}
+$("back").addEventListener("click", () => history.back());
+window.addEventListener("popstate", () => { if(peerId) closeChatView(); });
+$("peer").addEventListener("click", () => { if(peerId) openProfile(peerId); });
+
+function renderMessages(){
+  const box = $("msgs");
+  const near = box.scrollHeight - box.scrollTop - box.clientHeight < 150;
+  const stick = near || firstRender;
+  box.textContent = "";
+  if(!msgDocs.length){
+    box.append(h("div", { class: "empty", text: "Henüz mesaj yok. İlk mesajı sen yaz." }));
+    return;
+  }
+  for(const d of msgDocs){
+    const mine = d.uid === myId;
+    const bubble = h("div", { class: "bubble" + (d.deleted ? " gone" : "") });
+    if(d.deleted){
+      bubble.textContent = "🚫 Bu mesaj silindi";
+    } else if(typeof d.image === "string" && d.image.startsWith("data:image/jpeg")){
       bubble.classList.add("photo");
-      const img = document.createElement("img");
-      img.src = d.image; img.alt = "Fotoğraf";
-      bubble.appendChild(img);
+      const img = h("img", { alt: "Fotoğraf" });
+      img.src = d.image;
+      img.addEventListener("load", () => { if(stick) box.scrollTop = box.scrollHeight; });
+      img.addEventListener("click", (e) => { e.stopPropagation(); openViewer(d.image); });
+      bubble.append(img);
     } else {
       bubble.textContent = d.text || "";
     }
-    wrap.appendChild(bubble);
-    const t = document.createElement("div");
-    t.className = "time"; t.textContent = fmtTime(d.date);
-    wrap.appendChild(t);
-    listEl.appendChild(wrap);
+    const wrap = h("div", { class: "msg " + (mine ? "mine" : "theirs") }, bubble,
+      h("div", { class: "time", text: fmtTime(d.date) }));
+    if(mine && !d.deleted){
+      wrap.append(h("button", { class: "del", type: "button", text: "🗑️ Sil", onclick: (e) => { e.stopPropagation(); deleteMsg(d.id); } }));
+      bubble.addEventListener("click", () => {
+        const was = wrap.classList.contains("sel");
+        box.querySelectorAll(".msg.sel").forEach((n) => n.classList.remove("sel"));
+        if(!was) wrap.classList.add("sel");
+      });
+    }
+    box.append(wrap);
   }
-  if(nearBottom || docs.length) listEl.scrollTop = listEl.scrollHeight;
+  if(stick){ box.scrollTop = box.scrollHeight; firstRender = false; }
 }
 
-const q = query(collection(db, "messages"), orderBy("createdAt", "desc"), limit(100));
-onSnapshot(q, (snap) => {
-  statusEl.textContent = "";
-  const docs = snap.docs.map((s) => {
-    const data = s.data({ serverTimestamps: "estimate" });
-    return { ...data, date: data.createdAt ? data.createdAt.toDate() : null };
-  }).reverse();
-  render(docs);
-}, (err) => {
-  statusEl.textContent = "Mesajlar yüklenemedi. İnternetini ve Firestore izinlerini kontrol et.";
-  console.error(err);
+async function deleteMsg(id){
+  if(!peerId) return;
+  if(!confirm("Bu mesaj herkesten silinsin mi?")) return;
+  const cid = chatIdOf(myId, peerId);
+  try{
+    await updateDoc(doc(db, "chats", cid, "messages", id), { deleted: true, text: "", image: "" });
+    const last = msgDocs[msgDocs.length - 1];
+    if(last && last.id === id){
+      await setDoc(doc(db, "chats", cid), { lastText: "🚫 Bu mesaj silindi" }, { merge: true });
+    }
+  }catch(e){ console.error(e); toast("Silinemedi."); }
+}
+
+function markRead(){
+  if(!peerId || document.hidden) return;
+  const cid = chatIdOf(myId, peerId), c = chats[cid];
+  if(!c || !c.lastTs || c.lastFrom === myId) return;
+  if(marked[cid] === c.lastTs) return;
+  if(((c.read && c.read[myId]) || 0) >= c.lastTs) return;
+  marked[cid] = c.lastTs;
+  setDoc(doc(db, "chats", cid), { read: { [myId]: Math.max(Date.now(), c.lastTs) } }, { merge: true }).catch(() => {});
+}
+document.addEventListener("visibilitychange", () => {
+  if(!document.hidden){ saveMe(true); markRead(); }
 });
 
-async function send(payload){
-  if(!myName){ showNameScreen(); return; }
+async function sendMsg(payload, preview){
+  if(!peerId) return;
+  const cid = chatIdOf(myId, peerId);
   try{
-    await addDoc(collection(db, "messages"), {
-      uid: myId, name: myName, createdAt: serverTimestamp(), ...payload
-    });
-    statusEl.textContent = "";
-  }catch(err){
-    statusEl.textContent = "Gönderilemedi. Tekrar dene.";
-    console.error(err);
+    await addDoc(collection(db, "chats", cid, "messages"), { uid: myId, createdAt: serverTimestamp(), ...payload });
+    await setDoc(doc(db, "chats", cid), {
+      members: [myId, peerId], lastText: preview, lastTs: Date.now(), lastFrom: myId,
+      typing: { [myId]: 0 }, read: { [myId]: Date.now() }
+    }, { merge: true });
+  }catch(e){ console.error(e); toast("Gönderilemedi. Tekrar dene."); }
+}
+
+/* ---------- yazıyor... ---------- */
+function stopTyping(){
+  clearTimeout(idleT);
+  if(lastPing && peerId){
+    lastPing = 0;
+    setDoc(doc(db, "chats", chatIdOf(myId, peerId)), { typing: { [myId]: 0 } }, { merge: true }).catch(() => {});
   }
 }
+function updateTyping(){
+  if(!peerId){ return; }
+  const c = chats[chatIdOf(myId, peerId)];
+  const t = c && c.typing && c.typing[peerId];
+  $("typing").classList.toggle("on", !!(t && Date.now() - t < 6000));
+}
+setInterval(updateTyping, 1500);
+setInterval(refreshPeer, 30000);
 
 const textEl = $("text");
 function autosize(){
   textEl.style.height = "auto";
   textEl.style.height = Math.min(textEl.scrollHeight, 120) + "px";
 }
-textEl.addEventListener("input", autosize);
+textEl.addEventListener("input", () => {
+  autosize();
+  if(!peerId) return;
+  if(!textEl.value.trim()){ stopTyping(); return; }
+  const now = Date.now();
+  if(now - lastPing > 2500){
+    lastPing = now;
+    setDoc(doc(db, "chats", chatIdOf(myId, peerId)),
+      { members: [myId, peerId], typing: { [myId]: now } }, { merge: true }).catch(() => {});
+  }
+  clearTimeout(idleT);
+  idleT = setTimeout(stopTyping, 3500);
+});
 
 $("composer").addEventListener("submit", (e) => {
   e.preventDefault();
@@ -285,229 +673,228 @@ $("composer").addEventListener("submit", (e) => {
   if(!v) return;
   textEl.value = "";
   autosize();
-  send({ text: v });
+  stopTyping();
+  sendMsg({ text: v }, v.slice(0, 60));
+  textEl.focus();
 });
 
-$("photo-btn").addEventListener("click", () => $("hidden-file").click());
-$("cam-btn").addEventListener("click", () => $("cam-file").click());
+/* ---------- fotoğraf ---------- */
+$("b-cam").addEventListener("click", () => $("file-cam").click());
+$("b-gal").addEventListener("click", () => $("file-gal").click());
+
+async function shrink(file){
+  let src = null, W = 0, H = 0, bmp = null;
+  try{ bmp = await createImageBitmap(file); }catch(e){ bmp = null; }
+  if(bmp){ src = bmp; W = bmp.width; H = bmp.height; }
+  else{
+    src = await new Promise((resolve, reject) => {
+      const img = new Image();
+      const u = URL.createObjectURL(file);
+      img.onload = () => { URL.revokeObjectURL(u); resolve(img); };
+      img.onerror = () => { URL.revokeObjectURL(u); reject(new Error("img")); };
+      img.src = u;
+    });
+    W = src.naturalWidth || src.width; H = src.naturalHeight || src.height;
+  }
+  const c = document.createElement("canvas");
+  const ctx = c.getContext("2d");
+  let max = 800, q = 0.65, url = "";
+  for(let i = 0; i < 5; i++){
+    const s = Math.min(1, max / Math.max(W, H));
+    c.width = Math.max(1, Math.round(W * s));
+    c.height = Math.max(1, Math.round(H * s));
+    ctx.drawImage(src, 0, 0, c.width, c.height);
+    url = c.toDataURL("image/jpeg", q);
+    if(url.length < 450000) break;
+    max = Math.round(max * 0.8);
+    q = Math.max(0.5, q - 0.05);
+  }
+  if(bmp && bmp.close) bmp.close();
+  c.width = 1; c.height = 1;
+  if(url.length > 900000) throw new Error("big");
+  return url;
+}
 
 async function handleFile(e){
   const file = e.target.files[0];
   e.target.value = "";
-  if(!file) return;
-  statusEl.textContent = "Fotoğraf hazırlanıyor…";
+  if(!file || !peerId) return;
+  toast("Fotoğraf hazırlanıyor…", 30000);
   try{
     const url = await shrink(file);
-    if(url.length > 900000) throw new Error("big");
-    await send({ image: url });
+    await sendMsg({ image: url }, "📷 Fotoğraf");
+    $("toast").hidden = true;
   }catch(err){
-    statusEl.textContent = "Fotoğraf gönderilemedi. Daha küçük bir tane dene.";
+    console.error(err);
+    toast("Fotoğraf gönderilemedi. Başka bir tane dene.");
   }
 }
-$("hidden-file").addEventListener("change", handleFile);
-$("cam-file").addEventListener("change", handleFile);
+$("file-gal").addEventListener("change", handleFile);
+$("file-cam").addEventListener("change", handleFile);
 
-function shrink(file){
-  return new Promise((resolve, reject) => {
-    const img = new Image();
-    const objUrl = URL.createObjectURL(file);
-    img.onload = () => {
-      const max = 900;
-      const scale = Math.min(1, max / Math.max(img.width, img.height));
-      const c = document.createElement("canvas");
-      c.width = Math.round(img.width * scale);
-      c.height = Math.round(img.height * scale);
-      c.getContext("2d").drawImage(img, 0, 0, c.width, c.height);
-      URL.revokeObjectURL(objUrl);
-      resolve(c.toDataURL("image/jpeg", 0.7));
-    };
-    img.onerror = () => { URL.revokeObjectURL(objUrl); reject(new Error("img")); };
-    img.src = objUrl;
-  });
-}
+function openViewer(src){ $("viewer-img").src = src; $("viewer").hidden = false; }
+$("viewer").addEventListener("click", () => { $("viewer").hidden = true; });
 
-/* ---------- Sesli arama (WebRTC + Firestore) ---------- */
+/* ---------- arama (WebRTC + Firestore) ---------- */
 const RTC_CONFIG = { iceServers: [
   { urls: "stun:stun.l.google.com:19302" },
   { urls: "stun:stun1.l.google.com:19302" }
 ]};
-let pc = null, localStream = null, callRef = null, callRole = null;
-let unsubs = [];
-const pending = [];
+let pc = null, localStream = null, callRef = null, callRole = null, callVideo = false;
+let callUnsubs = [], pendingCand = [], callTimerI = null, callStart = 0, callTimeout = null;
+let answerSet = false, wakeLock = null;
+let ringCtx = null, ringI = null;
 
-function showCall(title, buttons){
-  $("call-title").textContent = title;
-  const a = $("call-actions");
+function startRing(){
+  stopRing();
+  try{
+    const AC = window.AudioContext || window.webkitAudioContext;
+    ringCtx = new AC();
+    if(ringCtx.state === "suspended") ringCtx.resume();
+    const pattern = () => {
+      if(!ringCtx) return;
+      const t0 = ringCtx.currentTime;
+      [0, 0.45].forEach((off, i) => {
+        const o = ringCtx.createOscillator(), g = ringCtx.createGain();
+        o.type = "square"; o.frequency.value = i ? 660 : 880;
+        g.gain.setValueAtTime(0.9, t0 + off);
+        g.gain.setValueAtTime(0, t0 + off + 0.35);
+        o.connect(g); g.connect(ringCtx.destination);
+        o.start(t0 + off); o.stop(t0 + off + 0.4);
+      });
+      if(navigator.vibrate) navigator.vibrate([400, 150, 400]);
+    };
+    pattern();
+    ringI = setInterval(pattern, 2200);
+  }catch(e){}
+}
+function stopRing(){
+  clearInterval(ringI); ringI = null;
+  try{ if(ringCtx) ringCtx.close(); }catch(e){}
+  ringCtx = null;
+  try{ if(navigator.vibrate) navigator.vibrate(0); }catch(e){}
+}
+
+function setCallUI(state, buttons){
+  $("c-state").textContent = state;
+  const a = $("c-actions");
   a.textContent = "";
   for(const b of buttons){
-    const el = document.createElement("button");
-    el.type = "button";
-    el.textContent = b.label;
-    el.className = b.cls || "";
-    el.addEventListener("click", b.fn);
-    a.appendChild(el);
+    a.append(h("button", { type: "button", class: "cbtn " + (b.cls || ""), onclick: b.fn, "aria-label": b.label },
+      h("span", { class: "ci", text: b.icon }),
+      h("span", { text: b.label })));
   }
-  $("call-ui").hidden = false;
+}
+function openCallUI(id, video, fallbackName){
+  const u = users[id] || {};
+  const nm = u.name || fallbackName || "Biri";
+  $("c-name").textContent = nm;
+  applyAvatar($("c-av"), id, nm);
+  $("call").classList.toggle("video", !!video);
+  $("call").classList.remove("connected");
+  $("call").hidden = false;
 }
 
-function cleanup(){
-  unsubs.forEach((u) => { try{ u(); }catch(e){} });
-  unsubs = [];
-  pending.length = 0;
+function cleanupCall(){
+  callUnsubs.forEach((u) => { try{ u(); }catch(e){} });
+  callUnsubs = []; pendingCand = [];
+  clearInterval(callTimerI); clearTimeout(callTimeout);
+  callTimerI = null; callStart = 0; answerSet = false;
+  stopRing();
   if(pc){ try{ pc.close(); }catch(e){} pc = null; }
   if(localStream){ localStream.getTracks().forEach((t) => t.stop()); localStream = null; }
-  $("remote-audio").srcObject = null;
-  callRef = null;
-  callRole = null;
-  $("call-ui").hidden = true;
+  $("rv").srcObject = null; $("lv").srcObject = null;
+  callRef = null; callRole = null;
+  $("call").hidden = true;
+  $("call").classList.remove("video", "connected");
+  try{ if(wakeLock) wakeLock.release(); }catch(e){}
+  wakeLock = null;
 }
-
 async function hangup(){
   const r = callRef;
-  cleanup();
-  if(r){
-    try{ await updateDoc(r, { status: "ended" }); }catch(e){}
-  }
+  cleanupCall();
+  if(r){ try{ await updateDoc(r, { status: "ended" }); }catch(e){} }
 }
 
-async function setupPc(){
-  localStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+function toggleMute(e){
+  const t = localStream && localStream.getAudioTracks()[0];
+  if(!t) return;
+  t.enabled = !t.enabled;
+  e.currentTarget.classList.toggle("off", !t.enabled);
+}
+function toggleCam(e){
+  const t = localStream && localStream.getVideoTracks()[0];
+  if(!t) return;
+  t.enabled = !t.enabled;
+  e.currentTarget.classList.toggle("off", !t.enabled);
+}
+function callButtons(){
+  const arr = [{ icon: "🎤", label: "Sessiz", fn: toggleMute }];
+  if(callVideo) arr.push({ icon: "📷", label: "Kamera", fn: toggleCam });
+  arr.push({ icon: "📵", label: "Kapat", cls: "danger", fn: hangup });
+  return arr;
+}
+function onConnected(){
+  if(callStart) return;
+  callStart = Date.now();
+  $("call").classList.add("connected");
+  setCallUI("00:00", callButtons());
+  callTimerI = setInterval(() => {
+    const s = Math.floor((Date.now() - callStart) / 1000);
+    $("c-state").textContent = String(Math.floor(s / 60)).padStart(2, "0") + ":" + String(s % 60).padStart(2, "0");
+  }, 1000);
+}
+
+async function setupPc(video){
+  localStream = await navigator.mediaDevices.getUserMedia({
+    audio: true, video: video ? { facingMode: "user" } : false
+  });
   pc = new RTCPeerConnection(RTC_CONFIG);
   localStream.getTracks().forEach((t) => pc.addTrack(t, localStream));
-  pc.ontrack = (e) => { $("remote-audio").srcObject = e.streams[0]; };
+  $("lv").srcObject = localStream;
+  pc.ontrack = (e) => { $("rv").srcObject = e.streams[0]; };
   pc.onconnectionstatechange = () => {
     if(!pc) return;
-    if(pc.connectionState === "connected"){
-      statusEl.textContent = "";
-      showCall("Görüşme sürüyor", [{ label: "Kapat", cls: "danger", fn: hangup }]);
-    }
+    if(pc.connectionState === "connected") onConnected();
     if(pc.connectionState === "failed"){
-      statusEl.textContent = "Bağlanılamadı. İkiniz de aynı wifi'da deneyin.";
+      toast("Bağlanılamadı. İkiniz de aynı wifi'da deneyin.");
       hangup();
     }
   };
+  try{ wakeLock = await navigator.wakeLock.request("screen"); }catch(e){}
 }
 
-async function flushCandidates(){
+async function flushCand(){
   if(!pc || !pc.remoteDescription) return;
-  while(pending.length){
-    const c = pending.shift();
+  while(pendingCand.length){
+    const c = pendingCand.shift();
     try{ await pc.addIceCandidate(c); }catch(e){ console.error(e); }
   }
 }
-
-function listenCandidates(coll){
-  const ref = collection(db, "calls", callRef.id, coll);
-  unsubs.push(onSnapshot(ref, (snap) => {
-    snap.docChanges().forEach((ch) => {
-      if(ch.type === "added") pending.push(ch.doc.data());
-    });
-    flushCandidates();
+function listenCand(coll){
+  callUnsubs.push(onSnapshot(collection(db, "calls", callRef.id, coll), (snap) => {
+    snap.docChanges().forEach((ch) => { if(ch.type === "added") pendingCand.push(ch.doc.data()); });
+    flushCand();
   }));
 }
 
-async function startCall(){
-  if(!myName){ showNameScreen(); return; }
-  if(pc) return;
-  statusEl.textContent = "";
+function notifyCallee(id){
   try{
-    await setupPc();
-    callRole = "caller";
-    callRef = await addDoc(collection(db, "calls"), {
-      callerId: myId, callerName: myName, status: "preparing", ts: Date.now()
+    const qs = new URLSearchParams({
+      title: "Arkadas", priority: "urgent", tags: "telephone_receiver",
+      click: location.href.split("#")[0].split("?")[0]
     });
-    const myRef = callRef;
-    pc.onicecandidate = (e) => {
-      if(e.candidate && callRef){
-        addDoc(collection(db, "calls", callRef.id, "callerCandidates"), e.candidate.toJSON());
-      }
-    };
-    const offer = await pc.createOffer();
-    await pc.setLocalDescription(offer);
-    await updateDoc(callRef, {
-      offer: { type: offer.type, sdp: offer.sdp }, status: "ringing", ts: Date.now()
-    });
-    showCall("Aranıyor…", [{ label: "İptal", cls: "danger", fn: hangup }]);
-    unsubs.push(onSnapshot(callRef, async (s) => {
-      const d = s.data();
-      if(!d || !pc) return;
-      if(d.answer && !pc.remoteDescription){
-        await pc.setRemoteDescription(d.answer);
-        flushCandidates();
-      }
-      if(d.status === "ended"){ cleanup(); }
-    }));
-    listenCandidates("calleeCandidates");
-    fetch("https://ntfy.sh/arkadas-f3e00-x7q2m9k4p8", {
+    fetch("https://ntfy.sh/" + topicOf(id) + "?" + qs.toString(), {
       method: "POST",
-      body: myName + " arıyor 📞",
-      headers: { "Title": "Arkadas", "Priority": "urgent", "Click": "https://arasbezir.github.io/Arkadas/Arkadas.html" }
+      body: myName + (callVideo ? " görüntülü arıyor 📹" : " arıyor 📞")
     }).catch(() => {});
-    setTimeout(() => {
-      if(callRef === myRef && pc && pc.connectionState !== "connected"){
-        statusEl.textContent = "Açan olmadı.";
-        hangup();
-      }
-    }, 45000);
-  }catch(err){
-    console.error(err);
-    statusEl.textContent = "Arama başlatılamadı. Mikrofon iznini kontrol et.";
-    cleanup();
-  }
+  }catch(e){}
 }
 
-async function answerCall(d){
-  try{
-    await setupPc();
-    pc.onicecandidate = (e) => {
-      if(e.candidate && callRef){
-        addDoc(collection(db, "calls", callRef.id, "calleeCandidates"), e.candidate.toJSON());
-      }
-    };
-    listenCandidates("callerCandidates");
-    await pc.setRemoteDescription(d.offer);
-    flushCandidates();
-    const ans = await pc.createAnswer();
-    await pc.setLocalDescription(ans);
-    await updateDoc(callRef, {
-      answer: { type: ans.type, sdp: ans.sdp }, status: "active"
-    });
-    showCall("Bağlanıyor…", [{ label: "Kapat", cls: "danger", fn: hangup }]);
-  }catch(err){
-    console.error(err);
-    statusEl.textContent = "Cevaplanamadı. Mikrofon iznini kontrol et.";
-    cleanup();
-  }
-}
-
-function incoming(id, d){
-  callRef = doc(db, "calls", id);
-  callRole = "callee";
-  showCall((d.callerName || "Biri") + " arıyor…", [
-    { label: "Cevapla", cls: "ok", fn: () => answerCall(d) },
-    { label: "Reddet", cls: "danger", fn: () => cleanup() }
-  ]);
-  unsubs.push(onSnapshot(callRef, (s) => {
-    const x = s.data();
-    if(!x) return;
-    if(x.status === "ended" && callRole === "callee"){ cleanup(); }
-    if(x.status === "active" && !pc){ cleanup(); }
-  }));
-}
-
-$("call-btn").addEventListener("click", startCall);
-
-const ringQ = query(collection(db, "calls"), where("status", "==", "ringing"));
-onSnapshot(ringQ, (snap) => {
-  snap.docChanges().forEach((ch) => {
-    if(ch.type !== "added") return;
-    const d = ch.doc.data();
-    if(d.callerId === myId) return;
-    if(Date.now() - d.ts > 60000) return;
-    if(pc || callRole) return;
-    incoming(ch.doc.id, d);
-  });
-}, (err) => { console.error(err); });
-</script>
-</body>
-</html>
+async function startCall(friendId, video){
+  if(pc || callRole) return;
+  closeSheet();
+  callVideo = !!video; callRole = "caller";
+  openCallUI(friendId, callVideo);
+  setCallUI("Hazırlanıyor…", [{ icon: "📵", label: "İptal", cls: "danger", fn: hangup }]);
+  try
