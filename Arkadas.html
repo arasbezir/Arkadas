@@ -244,6 +244,17 @@ button{font:inherit; color:inherit; cursor:pointer; -webkit-tap-highlight-color:
   <div id="c-actions" class="call-actions"></div>
 </div>
 
+<script>
+function arkErr(m){
+  var d=document.createElement("div");
+  d.style.cssText="position:fixed;left:0;right:0;bottom:0;z-index:99;background:#b00020;color:#fff;padding:8px 10px;font:12px/1.3 monospace;word-break:break-all";
+  d.textContent="Hata: "+m;
+  (document.body||document.documentElement).appendChild(d);
+}
+window.addEventListener("error",function(e){ arkErr((e.message||"dosya yüklenemedi")+(e.lineno?" (satır "+e.lineno+")":"")); },true);
+window.addEventListener("unhandledrejection",function(e){ arkErr(String(e.reason&&e.reason.message||e.reason)); });
+</script>
+
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js";
 import {
@@ -897,4 +908,106 @@ async function startCall(friendId, video){
   callVideo = !!video; callRole = "caller";
   openCallUI(friendId, callVideo);
   setCallUI("Hazırlanıyor…", [{ icon: "📵", label: "İptal", cls: "danger", fn: hangup }]);
-  try
+  try{
+    await setupPc(callVideo);
+    callRef = await addDoc(collection(db, "calls"), {
+      callerId: myId, callerName: myName, calleeId: friendId,
+      video: callVideo, status: "preparing", ts: Date.now()
+    });
+    const myRef = callRef;
+    pc.onicecandidate = (e) => {
+      if(e.candidate && callRef){
+        addDoc(collection(db, "calls", callRef.id, "callerCandidates"), e.candidate.toJSON()).catch(() => {});
+      }
+    };
+    const offer = await pc.createOffer();
+    await pc.setLocalDescription(offer);
+    await updateDoc(callRef, { offer: { type: offer.type, sdp: offer.sdp }, status: "ringing", ts: Date.now() });
+    setCallUI("Aranıyor…", [{ icon: "📵", label: "İptal", cls: "danger", fn: hangup }]);
+    callUnsubs.push(onSnapshot(callRef, async (s) => {
+      const d = s.data();
+      if(!d || !pc) return;
+      if(d.answer && !answerSet){
+        answerSet = true;
+        try{ await pc.setRemoteDescription(d.answer); }catch(e){ console.error(e); }
+        flushCand();
+      }
+      if(d.status === "ended") cleanupCall();
+    }));
+    listenCand("calleeCandidates");
+    notifyCallee(friendId);
+    callTimeout = setTimeout(() => {
+      if(callRef === myRef && callRole === "caller" && !callStart){
+        toast("Açan olmadı.");
+        hangup();
+      }
+    }, 45000);
+  }catch(err){
+    console.error(err);
+    toast("Arama başlatılamadı. Mikrofon/kamera iznini kontrol et.");
+    await hangup();
+  }
+}
+
+async function answerCall(id, d){
+  stopRing();
+  callVideo = !!d.video;
+  setCallUI("Bağlanıyor…", [{ icon: "📵", label: "Kapat", cls: "danger", fn: hangup }]);
+  try{
+    await setupPc(callVideo);
+    pc.onicecandidate = (e) => {
+      if(e.candidate && callRef){
+        addDoc(collection(db, "calls", callRef.id, "calleeCandidates"), e.candidate.toJSON()).catch(() => {});
+      }
+    };
+    listenCand("callerCandidates");
+    await pc.setRemoteDescription(d.offer);
+    flushCand();
+    const ans = await pc.createAnswer();
+    await pc.setLocalDescription(ans);
+    await updateDoc(callRef, { answer: { type: ans.type, sdp: ans.sdp }, status: "active" });
+  }catch(err){
+    console.error(err);
+    toast("Cevaplanamadı. Mikrofon/kamera iznini kontrol et.");
+    await hangup();
+  }
+}
+
+function incoming(id, d){
+  callRef = doc(db, "calls", id);
+  callRole = "callee"; callVideo = !!d.video;
+  openCallUI(d.callerId, callVideo, d.callerName);
+  setCallUI(callVideo ? "Görüntülü arama…" : "Sesli arama…", [
+    { icon: "✅", label: "Cevapla", cls: "ok", fn: () => answerCall(id, d) },
+    { icon: "📵", label: "Reddet", cls: "danger", fn: hangup }
+  ]);
+  startRing();
+  callUnsubs.push(onSnapshot(callRef, (s) => {
+    const x = s.data();
+    if(!x) return;
+    if(x.status === "ended") cleanupCall();
+    if(x.status === "active" && !pc) cleanupCall();
+  }));
+}
+
+$("acall").addEventListener("click", () => { if(peerId) startCall(peerId, false); });
+$("vcall").addEventListener("click", () => { if(peerId) startCall(peerId, true); });
+
+onSnapshot(query(collection(db, "calls"), where("calleeId", "==", myId), where("status", "==", "ringing")), (snap) => {
+  snap.docChanges().forEach((ch) => {
+    if(ch.type !== "added") return;
+    const d = ch.doc.data();
+    if(Date.now() - d.ts > 60000) return;
+    if(pc || callRole) return;
+    incoming(ch.doc.id, d);
+  });
+}, (err) => { console.error(err); });
+
+/* ---------- başlangıç ---------- */
+applyAvatar($("me-btn"), myId, myName);
+if(myName){ saveMe(); } else { showNameScreen(); }
+setInterval(() => { if(!document.hidden && myName) saveMe(true); }, 60000);
+renderHome();
+</script>
+</body>
+</html>
