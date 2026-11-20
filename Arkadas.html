@@ -1,0 +1,293 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#1f7a5a">
+<title>Arkadaş</title>
+<style>
+  :root{
+    --bg:#f2f5f1; --surface:#ffffff; --fg:#18211c; --muted:#6a766f;
+    --accent:#1f7a5a; --accent-fg:#ffffff; --mine:#1f7a5a; --mine-fg:#ffffff;
+    --theirs:#ffffff; --line:#dce3de; --danger:#b3261e;
+    color-scheme: light;
+  }
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      --bg:#101613; --surface:#18211c; --fg:#e8efea; --muted:#92a199;
+      --accent:#4cc79a; --accent-fg:#07130d; --mine:#2a8a68; --mine-fg:#ffffff;
+      --theirs:#1d2822; --line:#2a3731; --danger:#f2b8b5;
+      color-scheme: dark;
+    }
+  }
+  *{box-sizing:border-box}
+  html,body{height:100%;margin:0}
+  body{
+    background:var(--bg); color:var(--fg);
+    font:16px/1.4 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+    display:flex; flex-direction:column;
+    -webkit-text-size-adjust:100%;
+  }
+  header{
+    display:flex; align-items:center; justify-content:space-between; gap:12px;
+    padding:12px 16px; padding-top:calc(12px + env(safe-area-inset-top,0px));
+    background:var(--surface); border-bottom:1px solid var(--line);
+  }
+  header h1{margin:0; font-size:1.15rem; letter-spacing:.01em}
+  header button{
+    font:inherit; font-size:.85rem; color:var(--muted); background:none;
+    border:1px solid var(--line); border-radius:999px; padding:6px 12px;
+  }
+  #list{
+    flex:1; min-height:0; overflow-y:auto; padding:16px;
+    display:flex; flex-direction:column; gap:8px;
+  }
+  .empty{margin:auto; color:var(--muted); text-align:center; max-width:28ch}
+  .msg{max-width:82%; display:flex; flex-direction:column; gap:2px}
+  .msg.mine{align-self:flex-end; align-items:flex-end}
+  .msg.theirs{align-self:flex-start; align-items:flex-start}
+  .who{font-size:.75rem; color:var(--muted); padding:0 6px}
+  .bubble{
+    padding:8px 12px; border-radius:18px; overflow-wrap:anywhere; white-space:pre-wrap;
+    background:var(--theirs); border:1px solid var(--line);
+  }
+  .mine .bubble{background:var(--mine); color:var(--mine-fg); border-color:transparent; border-bottom-right-radius:6px}
+  .theirs .bubble{border-bottom-left-radius:6px}
+  .bubble img{display:block; max-width:100%; width:260px; height:auto; border-radius:12px}
+  .bubble.photo{padding:4px}
+  .time{font-size:.7rem; color:var(--muted); padding:0 6px}
+  form{
+    display:flex; align-items:flex-end; gap:8px;
+    padding:10px 12px; padding-bottom:calc(10px + env(safe-area-inset-bottom,0px));
+    padding-left:max(12px, env(safe-area-inset-left,0px));
+    padding-right:max(12px, env(safe-area-inset-right,0px));
+    background:var(--surface); border-top:1px solid var(--line);
+  }
+  textarea{
+    flex:1; min-width:0; resize:none; max-height:120px;
+    font:inherit; color:var(--fg); background:var(--bg);
+    border:1px solid var(--line); border-radius:20px; padding:10px 14px;
+  }
+  .icon-btn, .send{
+    flex:none; height:42px; border-radius:21px; border:0; font:inherit; cursor:pointer;
+  }
+  .icon-btn{width:42px; background:var(--bg); color:var(--fg); border:1px solid var(--line); font-size:1.2rem}
+  .send{padding:0 18px; background:var(--accent); color:var(--accent-fg); font-weight:600}
+  button:focus-visible, textarea:focus-visible, input:focus-visible{outline:2px solid var(--accent); outline-offset:2px}
+  #hidden-file{display:none}
+  #name-screen{
+    position:fixed; inset:0; z-index:5; background:var(--bg);
+    display:flex; align-items:center; justify-content:center; padding:24px;
+  }
+  #name-screen[hidden]{display:none}
+  #name-box{width:100%; max-width:340px; display:flex; flex-direction:column; gap:12px}
+  #name-box h2{margin:0; font-size:1.5rem}
+  #name-box p{margin:0; color:var(--muted)}
+  #name-box input{
+    font:inherit; color:var(--fg); background:var(--surface);
+    border:1px solid var(--line); border-radius:12px; padding:12px 14px;
+  }
+  #name-box button{
+    font:inherit; font-weight:600; border:0; border-radius:12px; padding:12px;
+    background:var(--accent); color:var(--accent-fg);
+  }
+  #status{font-size:.8rem; color:var(--danger); padding:0 16px 6px; min-height:0}
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Arkadaş</h1>
+  <button id="change-name" type="button">İsmim: <span id="my-name"></span></button>
+</header>
+
+<div id="list" aria-live="polite">
+  <div class="empty" id="empty">Henüz mesaj yok. İlk mesajı sen yaz.</div>
+</div>
+<div id="status" role="status"></div>
+
+<form id="composer" autocomplete="off">
+  <input type="file" id="hidden-file" accept="image/*">
+  <button class="icon-btn" id="photo-btn" type="button" aria-label="Fotoğraf gönder">📷</button>
+  <textarea id="text" rows="1" placeholder="Mesaj yaz" aria-label="Mesaj"></textarea>
+  <button class="send" type="submit">Gönder</button>
+</form>
+
+<div id="name-screen" hidden>
+  <form id="name-box">
+    <h2>Adın ne?</h2>
+    <p>Arkadaşların mesajlarında bu adı görecek.</p>
+    <input id="name-input" maxlength="20" placeholder="Örn. Aras" aria-label="Adın" required>
+    <button type="submit">Başla</button>
+  </form>
+</div>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js";
+import {
+  getFirestore, collection, addDoc, query, orderBy, limit,
+  onSnapshot, serverTimestamp
+} from "https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyAj8McuEIan1LTx9NzXb5NZ73Dq_NSepHY",
+  authDomain: "arkadas-app-f3e00.firebaseapp.com",
+  projectId: "arkadas-app-f3e00",
+  storageBucket: "arkadas-app-f3e00.firebasestorage.app",
+  messagingSenderId: "253421208511",
+  appId: "1:253421208511:web:26a6789da8c999d829970a"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+
+const $ = (id) => document.getElementById(id);
+const listEl = $("list"), emptyEl = $("empty"), statusEl = $("status");
+
+function store(key, value){
+  try{ if(value === undefined) return localStorage.getItem(key); localStorage.setItem(key, value); }
+  catch(e){ return null; }
+}
+
+let myName = store("ark_name") || "";
+let myId = store("ark_id");
+if(!myId){
+  myId = Math.random().toString(36).slice(2) + Date.now().toString(36);
+  store("ark_id", myId);
+}
+
+function showNameScreen(){
+  $("name-input").value = myName;
+  $("name-screen").hidden = false;
+  $("name-input").focus();
+}
+function refreshName(){ $("my-name").textContent = myName; }
+
+$("name-box").addEventListener("submit", (e) => {
+  e.preventDefault();
+  const v = $("name-input").value.trim();
+  if(!v) return;
+  myName = v;
+  store("ark_name", v);
+  refreshName();
+  $("name-screen").hidden = true;
+});
+$("change-name").addEventListener("click", showNameScreen);
+
+if(myName){ refreshName(); } else { showNameScreen(); }
+
+function fmtTime(date){
+  if(!date) return "";
+  return date.toLocaleTimeString("tr-TR", {hour:"2-digit", minute:"2-digit"});
+}
+
+function render(docs){
+  listEl.querySelectorAll(".msg").forEach(n => n.remove());
+  emptyEl.hidden = docs.length > 0;
+  const nearBottom = listEl.scrollHeight - listEl.scrollTop - listEl.clientHeight < 120;
+  for(const d of docs){
+    const mine = d.uid === myId;
+    const wrap = document.createElement("div");
+    wrap.className = "msg " + (mine ? "mine" : "theirs");
+    if(!mine){
+      const who = document.createElement("div");
+      who.className = "who"; who.textContent = d.name || "Biri";
+      wrap.appendChild(who);
+    }
+    const bubble = document.createElement("div");
+    bubble.className = "bubble";
+    if(typeof d.image === "string" && d.image.startsWith("data:image/jpeg")){
+      bubble.classList.add("photo");
+      const img = document.createElement("img");
+      img.src = d.image; img.alt = "Fotoğraf";
+      bubble.appendChild(img);
+    } else {
+      bubble.textContent = d.text || "";
+    }
+    wrap.appendChild(bubble);
+    const t = document.createElement("div");
+    t.className = "time"; t.textContent = fmtTime(d.date);
+    wrap.appendChild(t);
+    listEl.appendChild(wrap);
+  }
+  if(nearBottom || docs.length) listEl.scrollTop = listEl.scrollHeight;
+}
+
+const q = query(collection(db, "messages"), orderBy("createdAt", "desc"), limit(100));
+onSnapshot(q, (snap) => {
+  statusEl.textContent = "";
+  const docs = snap.docs.map((s) => {
+    const data = s.data({ serverTimestamps: "estimate" });
+    return { ...data, date: data.createdAt ? data.createdAt.toDate() : null };
+  }).reverse();
+  render(docs);
+}, (err) => {
+  statusEl.textContent = "Mesajlar yüklenemedi. İnternetini ve Firestore izinlerini kontrol et.";
+  console.error(err);
+});
+
+async function send(payload){
+  if(!myName){ showNameScreen(); return; }
+  try{
+    await addDoc(collection(db, "messages"), {
+      uid: myId, name: myName, createdAt: serverTimestamp(), ...payload
+    });
+    statusEl.textContent = "";
+  }catch(err){
+    statusEl.textContent = "Gönderilemedi. Tekrar dene.";
+    console.error(err);
+  }
+}
+
+const textEl = $("text");
+function autosize(){
+  textEl.style.height = "auto";
+  textEl.style.height = Math.min(textEl.scrollHeight, 120) + "px";
+}
+textEl.addEventListener("input", autosize);
+
+$("composer").addEventListener("submit", (e) => {
+  e.preventDefault();
+  const v = textEl.value.trim();
+  if(!v) return;
+  textEl.value = "";
+  autosize();
+  send({ text: v });
+});
+
+$("photo-btn").addEventListener("click", () => $("hidden-file").click());
+$("hidden-file").addEventListener("change", async (e) => {
+  const file = e.target.files[0];
+  e.target.value = "";
+  if(!file) return;
+  statusEl.textContent = "Fotoğraf hazırlanıyor…";
+  try{
+    const url = await shrink(file);
+    if(url.length > 900000) throw new Error("big");
+    await send({ image: url });
+  }catch(err){
+    statusEl.textContent = "Fotoğraf gönderilemedi. Daha küçük bir tane dene.";
+  }
+});
+
+function shrink(file){
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    const objUrl = URL.createObjectURL(file);
+    img.onload = () => {
+      const max = 900;
+      const scale = Math.min(1, max / Math.max(img.width, img.height));
+      const c = document.createElement("canvas");
+      c.width = Math.round(img.width * scale);
+      c.height = Math.round(img.height * scale);
+      c.getContext("2d").drawImage(img, 0, 0, c.width, c.height);
+      URL.revokeObjectURL(objUrl);
+      resolve(c.toDataURL("image/jpeg", 0.7));
+    };
+    img.onerror = () => { URL.revokeObjectURL(objUrl); reject(new Error("img")); };
+    img.src = objUrl;
+  });
+}
+</script>
+</body>
+</html>
