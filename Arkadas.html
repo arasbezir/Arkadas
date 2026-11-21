@@ -73,7 +73,7 @@ button{font:inherit; color:inherit; cursor:pointer; -webkit-tap-highlight-color:
 .peer-txt{display:flex; flex-direction:column; min-width:0}
 .peer-txt b{font-size:1.02rem; white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
 .peer-txt small{font-size:.75rem; opacity:.85}
-#msgs{
+.msgs{
   flex:1; min-height:0; overflow-y:auto; padding:12px;
   display:flex; flex-direction:column; gap:6px; background:var(--chatbg);
 }
@@ -95,24 +95,25 @@ button{font:inherit; color:inherit; cursor:pointer; -webkit-tap-highlight-color:
   border-radius:999px; padding:4px 10px; font-size:.8rem;
 }
 .msg.sel .del{display:inline-block}
-#typing{display:none; align-items:center; gap:6px; padding:4px 16px 6px; font-size:.8rem; color:var(--muted); background:var(--chatbg)}
-#typing.on{display:flex}
+.typing{display:none; align-items:center; gap:6px; padding:4px 16px 6px; font-size:.8rem; color:var(--muted); background:var(--chatbg)}
+.typing.on{display:flex}
 .dots{display:inline-flex; gap:3px}
 .dots i{width:6px; height:6px; border-radius:50%; background:var(--muted); animation:tdot 1.2s infinite ease-in-out}
 .dots i:nth-child(2){animation-delay:.2s}
 .dots i:nth-child(3){animation-delay:.4s}
 @keyframes tdot{0%,60%,100%{opacity:.3; transform:translateY(0)}30%{opacity:1; transform:translateY(-3px)}}
-#composer{
+#composer,#jcomposer{
   display:flex; align-items:flex-end; gap:8px; padding:8px 10px;
   padding-bottom:calc(8px + env(safe-area-inset-bottom,0px));
   background:var(--surface); border-top:1px solid var(--line);
 }
-#text{
+#text,#jtext{
   flex:1; min-width:0; resize:none; max-height:120px; font:inherit; color:var(--fg);
   background:var(--bg); border:1px solid var(--line); border-radius:20px; padding:10px 14px;
 }
 .icon-btn,.send{flex:none; height:42px; border-radius:21px; border:0}
 .icon-btn{width:42px; background:var(--bg); border:1px solid var(--line); font-size:1.15rem}
+.icon-btn.rec{background:#c0392b; color:#fff; border-color:#c0392b}
 .send{padding:0 18px; background:var(--accent); color:var(--accent-fg); font-weight:600}
 .overlay{position:fixed; inset:0; z-index:10; background:rgba(0,0,0,.45); display:flex; align-items:flex-end; justify-content:center}
 .overlay.dark{background:rgba(0,0,0,.92); align-items:center; z-index:15}
@@ -208,14 +209,35 @@ button{font:inherit; color:inherit; cursor:pointer; -webkit-tap-highlight-color:
     <button id="vcall" class="ghost" type="button" aria-label="Görüntülü ara">📹</button>
     <button id="acall" class="ghost" type="button" aria-label="Sesli ara">📞</button>
   </header>
-  <div id="msgs"></div>
-  <div id="typing"><span>yazıyor</span><span class="dots"><i></i><i></i><i></i></span></div>
+  <div id="msgs" class="msgs"></div>
+  <div id="typing" class="typing"><span>yazıyor</span><span class="dots"><i></i><i></i><i></i></span></div>
   <form id="composer" autocomplete="off">
     <input type="file" id="file-gal" accept="image/*" hidden>
     <input type="file" id="file-cam" accept="image/*" capture="environment" hidden>
     <button class="icon-btn" id="b-cam" type="button" aria-label="Fotoğraf çek">📷</button>
     <button class="icon-btn" id="b-gal" type="button" aria-label="Galeriden gönder">🖼️</button>
     <textarea id="text" rows="1" placeholder="Mesaj yaz" aria-label="Mesaj"></textarea>
+    <button class="send" type="submit">Gönder</button>
+  </form>
+</div>
+
+<div id="jarvis" class="view">
+  <header class="top">
+    <button id="j-back" class="ghost" type="button" aria-label="Geri">←</button>
+    <div class="peer" style="cursor:default">
+      <span id="j-av" class="avatar sm">🤖</span>
+      <span class="peer-txt"><b>Jarvis</b><small id="j-status">hazır</small></span>
+    </div>
+    <button id="j-voice" class="ghost" type="button" aria-label="Sesli cevap">🔇</button>
+    <button id="j-set" class="ghost" type="button" aria-label="Ayarlar">⚙️</button>
+  </header>
+  <div id="jmsgs" class="msgs"></div>
+  <div id="jtyping" class="typing"><span>Jarvis düşünüyor</span><span class="dots"><i></i><i></i><i></i></span></div>
+  <form id="jcomposer" autocomplete="off">
+    <input type="file" id="jfile" accept="image/*" hidden>
+    <button class="icon-btn" id="j-att" type="button" aria-label="Fotoğraf ekle">📎</button>
+    <button class="icon-btn" id="j-mic" type="button" aria-label="Konuş">🎤</button>
+    <textarea id="jtext" rows="1" placeholder="Jarvis'e yaz…" aria-label="Mesaj"></textarea>
     <button class="send" type="submit">Gönder</button>
   </form>
 </div>
@@ -330,6 +352,10 @@ function presence(u){
   const day = same ? "" : d.toLocaleDateString("tr-TR", { day: "numeric", month: "short" }) + " ";
   return "son görülme " + day + fmtTime(d);
 }
+function autosize(el){
+  el.style.height = "auto";
+  el.style.height = Math.min(el.scrollHeight, 120) + "px";
+}
 
 /* ---------- kimlik ---------- */
 let myName = store("ark_name") || "";
@@ -346,6 +372,9 @@ const userRef = (id) => doc(db, "users", id);
 let users = {}, chats = {}, tab = "chats";
 let peerId = null, unsubMsgs = null, msgDocs = [], firstRender = true, marked = {};
 let lastPing = 0, idleT = null;
+let jOpen = false, jFirst = true, jBusy = false, jSpeakNext = false, jModelG = null, jModelF = null;
+let jHist = [];
+try{ jHist = JSON.parse(store("ark_jhist") || "[]"); if(!Array.isArray(jHist)) jHist = []; }catch(e){ jHist = []; }
 
 async function saveMe(quiet){
   if(!myName) return;
@@ -396,6 +425,19 @@ $("tab-chats").addEventListener("click", () => { tab = "chats"; renderHome(); })
 $("tab-add").addEventListener("click", () => { tab = "add"; renderHome(); });
 $("me-btn").addEventListener("click", () => openProfile(myId));
 
+function jarvisRow(){
+  const last = jHist[jHist.length - 1];
+  const av = h("span", { class: "avatar", text: "🤖" });
+  av.style.background = "linear-gradient(135deg,#1f7a5a,#2b6cb0)";
+  const sub = last ? (last.role === "user" ? "Sen: " : "") + String(last.text || "").slice(0, 60) : "Sor, konuş, ne istersen yap";
+  return h("div", { class: "row", role: "button", onclick: openJarvis },
+    av,
+    h("div", { class: "row-mid" },
+      h("div", { class: "row-name", text: "Jarvis ✨" }),
+      h("div", { class: "row-sub", text: sub })),
+    h("div", { class: "row-end" }, h("div", { text: last ? fmtTime(last.t) : "" })));
+}
+
 function renderHome(){
   $("tab-chats").classList.toggle("on", tab === "chats");
   $("tab-add").classList.toggle("on", tab === "add");
@@ -404,6 +446,7 @@ function renderHome(){
   const fr = friendsList().filter((id) => users[id]);
 
   if(tab === "chats"){
+    box.append(jarvisRow());
     if(!fr.length){
       box.append(h("div", { class: "empty", text: "Henüz arkadaşın yok. “Ekle” sekmesinden arkadaşlarını ekle." }));
       return;
@@ -531,7 +574,7 @@ function refreshPeer(){
 
 function openChat(id){
   closeSheet();
-  if(peerId) return;
+  if(peerId || jOpen) return;
   peerId = id; firstRender = true; msgDocs = [];
   $("home").classList.remove("on");
   $("chat").classList.add("on");
@@ -562,7 +605,10 @@ function closeChatView(){
   renderHome();
 }
 $("back").addEventListener("click", () => history.back());
-window.addEventListener("popstate", () => { if(peerId) closeChatView(); });
+window.addEventListener("popstate", () => {
+  if(jOpen) closeJarvis();
+  else if(peerId) closeChatView();
+});
 $("peer").addEventListener("click", () => { if(peerId) openProfile(peerId); });
 
 function renderMessages(){
@@ -660,12 +706,8 @@ setInterval(updateTyping, 1500);
 setInterval(refreshPeer, 30000);
 
 const textEl = $("text");
-function autosize(){
-  textEl.style.height = "auto";
-  textEl.style.height = Math.min(textEl.scrollHeight, 120) + "px";
-}
 textEl.addEventListener("input", () => {
-  autosize();
+  autosize(textEl);
   if(!peerId) return;
   if(!textEl.value.trim()){ stopTyping(); return; }
   const now = Date.now();
@@ -683,7 +725,7 @@ $("composer").addEventListener("submit", (e) => {
   const v = textEl.value.trim();
   if(!v) return;
   textEl.value = "";
-  autosize();
+  autosize(textEl);
   stopTyping();
   sendMsg({ text: v }, v.slice(0, 60));
   textEl.focus();
@@ -745,6 +787,412 @@ $("file-cam").addEventListener("change", handleFile);
 
 function openViewer(src){ $("viewer-img").src = src; $("viewer").hidden = false; }
 $("viewer").addEventListener("click", () => { $("viewer").hidden = true; });
+
+/* ---------- Jarvis ---------- */
+function saveJ(){
+  try{
+    store("ark_jhist", JSON.stringify(jHist.slice(-40).map((m) => ({ role: m.role, text: m.text, t: m.t }))));
+  }catch(e){}
+}
+
+function cleanText(t){
+  return String(t)
+    .replace(/\*\*(.+?)\*\*/g, "$1")
+    .replace(/^#{1,6}\s*/gm, "")
+    .replace(/^\s*[*-]\s+/gm, "• ")
+    .replace(/`{1,3}/g, "");
+}
+
+function stripAds(t){
+  const parts = String(t).split(/\n{2,}/);
+  while(parts.length > 1 && (/pollinations/i.test(parts[parts.length - 1]) || /^[-*_]{3,}$/.test(parts[parts.length - 1].trim()))){
+    parts.pop();
+  }
+  return parts.join("\n\n").trim();
+}
+
+function speak(text){
+  if(!("speechSynthesis" in window)) return;
+  try{
+    speechSynthesis.cancel();
+    const plain = cleanText(text).replace(/[•*_#]/g, "").replace(/\s+/g, " ").trim();
+    if(!plain) return;
+    const parts = plain.match(/[^.!?…]+[.!?…]*/g) || [plain];
+    const chunks = [];
+    let buf = "";
+    for(const p of parts){
+      if((buf + p).length > 180 && buf){ chunks.push(buf); buf = p; } else buf += p;
+    }
+    if(buf) chunks.push(buf);
+    for(const c of chunks){
+      const u = new SpeechSynthesisUtterance(c.trim());
+      u.lang = "tr-TR"; u.rate = 1.02;
+      speechSynthesis.speak(u);
+    }
+  }catch(e){}
+}
+
+function jSystem(){
+  return "Sen Jarvis'sin: Arkadaş adlı mesajlaşma uygulamasının içindeki kişisel yapay zekâ asistanısın. Kullanıcının adı " +
+    (myName || "arkadaş") + ". Varsayılan olarak Türkçe konuş (kullanıcı başka dilde yazarsa o dilde cevap ver). " +
+    "Samimi, net ve kısa ol; cevaplar telefon ekranında okunuyor, gereksiz uzatma. Sesli okunabilmesi için markdown, tablo ve emoji kullanımını en aza indir. " +
+    "Bilmediğin şeyi uydurma. Şu anki tarih ve saat: " +
+    new Date().toLocaleString("tr-TR", { dateStyle: "full", timeStyle: "short" }) + ".";
+}
+
+/* Gemini (anahtar girilmişse) */
+function buildContents(){
+  const arr = [];
+  const slice = jHist.slice(-24);
+  const lastMsg = jHist[jHist.length - 1];
+  for(const m of slice){
+    const role = m.role === "user" ? "user" : "model";
+    const parts = [{ text: (m.prompt || m.text) || "." }];
+    if(m.img && m === lastMsg){
+      parts.push({ inlineData: { mimeType: "image/jpeg", data: m.img.split(",")[1] } });
+    }
+    const prev = arr[arr.length - 1];
+    if(prev && prev.role === role) prev.parts.push(...parts);
+    else arr.push({ role, parts });
+  }
+  while(arr.length && arr[0].role !== "user") arr.shift();
+  return arr;
+}
+
+async function askGemini(){
+  const key = store("ark_jkey");
+  const list = [];
+  const custom = store("ark_jmodel");
+  if(custom) list.push(custom);
+  if(jModelG) list.push(jModelG);
+  ["gemini-2.5-flash", "gemini-3.5-flash", "gemini-2.5-flash-lite"].forEach((m) => list.push(m));
+  const models = [...new Set(list)];
+  const body = { systemInstruction: { parts: [{ text: jSystem() }] }, contents: buildContents() };
+  let lastStatus = 0, lastMsg = "";
+  for(const m of models){
+    let res;
+    try{
+      res = await fetch(
+        "https://generativelanguage.googleapis.com/v1beta/models/" + encodeURIComponent(m) +
+        ":generateContent?key=" + encodeURIComponent(key),
+        { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) }
+      );
+    }catch(e){ throw new Error("NET"); }
+    if(res.ok){
+      const data = await res.json();
+      const parts = (data.candidates && data.candidates[0] && data.candidates[0].content && data.candidates[0].content.parts) || [];
+      const txt = parts.filter((p) => p.text && !p.thought).map((p) => p.text).join("").trim();
+      if(txt){ jModelG = m; return txt; }
+      const br = data.promptFeedback && data.promptFeedback.blockReason;
+      throw new Error(br ? "BLOCK" : "EMPTY");
+    }
+    lastStatus = res.status;
+    lastMsg = "";
+    try{ const j = await res.json(); lastMsg = (j.error && j.error.message) || ""; }catch(e){}
+    if(res.status === 400 || res.status === 401 || res.status === 403) break;
+  }
+  const err = new Error("HTTP");
+  err.status = lastStatus; err.detail = lastMsg;
+  throw err;
+}
+
+/* Ücretsiz, anahtarsız servis (Pollinations) */
+function buildMessages(){
+  const arr = [{ role: "system", content: jSystem() }];
+  const lastMsg = jHist[jHist.length - 1];
+  for(const m of jHist.slice(-20)){
+    const role = m.role === "user" ? "user" : "assistant";
+    const txt = (m.prompt || m.text) || ".";
+    let content = txt;
+    if(m.img && m === lastMsg){
+      content = [{ type: "text", text: txt }, { type: "image_url", image_url: { url: m.img } }];
+    }
+    const prev = arr[arr.length - 1];
+    if(prev && prev.role === role && typeof prev.content === "string" && typeof content === "string"){
+      prev.content += "\n" + content;
+    } else {
+      arr.push({ role, content });
+    }
+  }
+  while(arr.length > 1 && arr[1].role !== "user") arr.splice(1, 1);
+  return arr;
+}
+
+async function askFree(){
+  const list = [];
+  const custom = store("ark_jmodel");
+  if(custom) list.push(custom);
+  if(jModelF) list.push(jModelF);
+  ["openai", "openai-fast", "mistral"].forEach((m) => list.push(m));
+  const models = [...new Set(list)];
+  let lastStatus = 0, lastMsg = "";
+  for(const m of models){
+    let res;
+    try{
+      res = await fetch("https://text.pollinations.ai/openai?referrer=arasbezir.github.io", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ model: m, messages: buildMessages() })
+      });
+    }catch(e){ throw new Error("NET"); }
+    const raw = await res.text();
+    if(res.ok){
+      let txt = "";
+      try{
+        const j = JSON.parse(raw);
+        txt = (j.choices && j.choices[0] && j.choices[0].message && j.choices[0].message.content) || "";
+      }catch(e){ txt = raw; }
+      txt = stripAds(String(txt).trim());
+      if(txt){ jModelF = m; return txt; }
+      throw new Error("EMPTY");
+    }
+    lastStatus = res.status;
+    lastMsg = raw.slice(0, 200);
+    if(res.status === 401 || res.status === 402 || res.status === 403) break;
+  }
+  const err = new Error("HTTP");
+  err.status = lastStatus; err.detail = lastMsg; err.free = true;
+  throw err;
+}
+
+async function askAI(){
+  if(store("ark_jkey")){
+    try{ return await askGemini(); }
+    catch(e){
+      if(e.status === 429 || e.message === "NET"){
+        try{ return await askFree(); }catch(e2){ throw e; }
+      }
+      throw e;
+    }
+  }
+  return askFree();
+}
+
+function jErrText(e){
+  if(e.message === "NET") return "İnternet bağlantısı yok ya da servise ulaşılamadı.";
+  if(e.message === "BLOCK") return "Bu isteğe cevap veremedim (güvenlik filtresi).";
+  if(e.message === "EMPTY") return "Boş cevap geldi, tekrar dene.";
+  const s = e.status;
+  if(e.free){
+    if(s === 401 || s === 402 || s === 403) return "Ücretsiz servis artık anahtar istiyor. ⚙️'dan Gemini anahtarı girersen çalışır.";
+    if(s === 429) return "Ücretsiz servis yoğun, biraz bekleyip tekrar dene.";
+    return "Ücretsiz servis cevap vermedi (" + (s || "?") + "). Biraz sonra dene ya da ⚙️'dan Gemini anahtarı gir.";
+  }
+  if(s === 400 && /api key/i.test(e.detail || "")) return "Anahtar geçersiz. ⚙️'dan doğru anahtarı gir ya da sil.";
+  if(s === 400) return "İstek reddedildi: " + String(e.detail || "").slice(0, 120);
+  if(s === 401 || s === 403) return "Anahtar çalışmıyor ya da izin yok. ⚙️'dan yeni anahtar dene ya da sil.";
+  if(s === 404) return "Model bulunamadı. ⚙️'dan model adını değiştirmeyi dene.";
+  if(s === 429) return "Ücretsiz limit doldu. Biraz bekleyip tekrar dene.";
+  return "Jarvis şu an cevap veremiyor (" + (s || "?") + "). Sonra tekrar dene.";
+}
+
+function jThinking(on){
+  $("jtyping").classList.toggle("on", on);
+  $("j-status").textContent = on ? "düşünüyor…" : "hazır";
+}
+
+function renderJ(){
+  const box = $("jmsgs");
+  const near = box.scrollHeight - box.scrollTop - box.clientHeight < 150;
+  box.textContent = "";
+  if(!jHist.length){
+    box.append(h("div", { class: "empty", text: "Jarvis'e bir şey sor." }));
+    return;
+  }
+  for(const m of jHist){
+    const mine = m.role === "user";
+    const bubble = h("div", { class: "bubble" });
+    if(m.img){
+      bubble.classList.add("photo");
+      const img = h("img", { alt: "Fotoğraf" });
+      img.src = m.img;
+      img.addEventListener("click", () => openViewer(m.img));
+      bubble.append(img);
+      if(m.text && m.text !== "📷 Fotoğraf"){
+        bubble.append(h("div", { style: "padding:6px 8px 2px", text: m.text }));
+      }
+    } else {
+      bubble.textContent = mine ? m.text : cleanText(m.text);
+    }
+    if(!mine) bubble.addEventListener("click", () => speak(m.text));
+    box.append(h("div", { class: "msg " + (mine ? "mine" : "theirs") }, bubble,
+      h("div", { class: "time", text: fmtTime(m.t) })));
+  }
+  if(near || jFirst){ box.scrollTop = box.scrollHeight; jFirst = false; }
+}
+
+async function jSend(text, img){
+  text = (text || "").trim();
+  if(!text && !img) return;
+  if(jBusy){ toast("Jarvis düşünüyor…"); return; }
+  jBusy = true;
+  try{ speechSynthesis.cancel(); }catch(e){}
+  const userMsg = {
+    role: "user", text: text || "📷 Fotoğraf",
+    prompt: img ? (text || "Bu fotoğrafı kısaca anlat.") : undefined,
+    img: img || null, t: Date.now()
+  };
+  jHist.push(userMsg);
+  renderJ(); saveJ(); jFirst = true;
+  jThinking(true);
+  try{
+    const reply = await askAI();
+    jHist.push({ role: "model", text: reply, t: Date.now() });
+    saveJ(); renderJ(); jFirst = true;
+    if(jSpeakNext || store("ark_jvoice") === "1") speak(reply);
+  }catch(e){
+    console.error(e);
+    toast(jErrText(e), 7000);
+  }
+  jSpeakNext = false; jBusy = false;
+  jThinking(false);
+}
+
+function syncVoiceBtn(){ $("j-voice").textContent = store("ark_jvoice") === "1" ? "🔊" : "🔇"; }
+
+function openJarvis(){
+  if(peerId || jOpen) return;
+  jOpen = true; jFirst = true;
+  $("home").classList.remove("on");
+  $("jarvis").classList.add("on");
+  history.pushState({ jarvis: 1 }, "");
+  syncVoiceBtn();
+  if(!jHist.length){
+    jHist.push({
+      role: "model", t: Date.now(),
+      text: "Merhaba " + (myName || "") + "! Ben Jarvis. Bana yazabilir ya da 🎤'ya basıp konuşabilirsin, 📎 ile fotoğraf da gönderebilirsin. Ne yapalım?"
+    });
+    saveJ();
+  }
+  renderJ();
+}
+function closeJarvis(){
+  try{ speechSynthesis.cancel(); }catch(e){}
+  try{ if(recog && listening) recog.stop(); }catch(e){}
+  jOpen = false;
+  $("jarvis").classList.remove("on");
+  $("home").classList.add("on");
+  renderHome();
+}
+$("j-back").addEventListener("click", () => history.back());
+
+function openJarvisSettings(){
+  const body = $("sheet-body");
+  body.textContent = "";
+  const av = h("div", { class: "avatar lg", text: "🤖" });
+  av.style.background = "linear-gradient(135deg,#1f7a5a,#2b6cb0)";
+  const keyIn = h("input", {
+    type: "password", autocomplete: "off", "aria-label": "Gemini anahtarı",
+    placeholder: store("ark_jkey") ? "Anahtar kayıtlı (değiştirmek için yenisini yapıştır)" : "Gemini anahtarı (isteğe bağlı)"
+  });
+  const modelIn = h("input", { "aria-label": "Model adı", placeholder: "Model adı (boş bırak)" });
+  modelIn.value = store("ark_jmodel") || "";
+  body.append(
+    av,
+    h("h2", { text: "Jarvis ayarları" }),
+    h("div", { class: "help", text: "Şu an " + (store("ark_jkey") ? "Gemini anahtarın kullanılıyor." : "ücretsiz anahtarsız servis kullanılıyor. Bu modda yazdıkların üçüncü taraf bir servise gider, özel şeyler yazma.") + " Daha kaliteli ve kararlı cevap için isteğe bağlı olarak ücretsiz bir Gemini anahtarı girebilirsin (aistudio.google.com/apikey). Anahtar sadece bu telefonda saklanır." }),
+    h("a", { class: "btn alt", href: "https://aistudio.google.com/apikey", target: "_blank", rel: "noopener", text: "Gemini anahtarı al" }),
+    keyIn,
+    modelIn,
+    h("button", { class: "btn", type: "button", text: "Kaydet", onclick: () => {
+      const k = keyIn.value.trim();
+      if(k) store("ark_jkey", k);
+      store("ark_jmodel", modelIn.value.trim());
+      jModelG = null; jModelF = null;
+      closeSheet();
+      toast("Kaydedildi");
+    }}),
+    h("button", { class: "btn bad", type: "button", text: "Sohbeti temizle", onclick: () => {
+      if(!confirm("Jarvis sohbeti silinsin mi?")) return;
+      jHist = []; saveJ(); renderJ(); closeSheet();
+    }}),
+    h("button", { class: "btn bad", type: "button", text: "Anahtarı sil", onclick: () => {
+      store("ark_jkey", ""); closeSheet(); toast("Anahtar silindi");
+    }})
+  );
+  $("sheet").hidden = false;
+}
+$("j-set").addEventListener("click", openJarvisSettings);
+
+$("j-voice").addEventListener("click", () => {
+  const on = store("ark_jvoice") === "1";
+  store("ark_jvoice", on ? "0" : "1");
+  try{ speechSynthesis.cancel(); }catch(e){}
+  syncVoiceBtn();
+  toast(on ? "Sesli cevap kapalı" : "Sesli cevap açık");
+});
+
+const jtextEl = $("jtext");
+jtextEl.addEventListener("input", () => autosize(jtextEl));
+$("jcomposer").addEventListener("submit", (e) => {
+  e.preventDefault();
+  const v = jtextEl.value;
+  jtextEl.value = "";
+  autosize(jtextEl);
+  jSend(v, null);
+  jtextEl.focus();
+});
+
+$("j-att").addEventListener("click", () => $("jfile").click());
+$("jfile").addEventListener("change", async (e) => {
+  const f = e.target.files[0];
+  e.target.value = "";
+  if(!f) return;
+  toast("Fotoğraf hazırlanıyor…", 15000);
+  try{
+    const url = await shrink(f);
+    const v = jtextEl.value;
+    jtextEl.value = "";
+    autosize(jtextEl);
+    $("toast").hidden = true;
+    jSend(v, url);
+  }catch(err){
+    console.error(err);
+    toast("Fotoğraf okunamadı.");
+  }
+});
+
+let recog = null, listening = false;
+$("j-mic").addEventListener("click", () => {
+  if(listening){ try{ recog.stop(); }catch(e){} return; }
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if(!SR){ toast("Bu tarayıcı sesli yazmayı desteklemiyor. Klavyedeki mikrofonu kullan."); return; }
+  try{ speechSynthesis.cancel(); }catch(e){}
+  recog = new SR();
+  recog.lang = "tr-TR";
+  recog.interimResults = true;
+  recog.continuous = false;
+  let finalText = "";
+  recog.onstart = () => {
+    listening = true;
+    $("j-mic").classList.add("rec");
+    jtextEl.placeholder = "Dinliyorum…";
+  };
+  recog.onresult = (e) => {
+    let t = "";
+    for(let i = 0; i < e.results.length; i++) t += e.results[i][0].transcript;
+    finalText = t;
+    jtextEl.value = t;
+    autosize(jtextEl);
+  };
+  recog.onerror = (e) => {
+    if(e.error === "not-allowed" || e.error === "service-not-allowed") toast("Mikrofon izni ver.");
+    else if(e.error !== "no-speech" && e.error !== "aborted") toast("Ses algılanamadı: " + e.error);
+  };
+  recog.onend = () => {
+    listening = false;
+    $("j-mic").classList.remove("rec");
+    jtextEl.placeholder = "Jarvis'e yaz…";
+    const t = finalText.trim();
+    if(t){
+      jtextEl.value = "";
+      autosize(jtextEl);
+      jSpeakNext = true;
+      jSend(t, null);
+    }
+  };
+  try{ recog.start(); }catch(e){ listening = false; }
+});
 
 /* ---------- arama (WebRTC + Firestore) ---------- */
 const RTC_CONFIG = { iceServers: [
