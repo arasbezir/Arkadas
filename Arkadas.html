@@ -867,17 +867,33 @@ async function askGemini(){
   if(jModelG) list.push(jModelG);
   ["gemini-2.5-flash", "gemini-3.5-flash", "gemini-2.5-flash-lite"].forEach((m) => list.push(m));
   const models = [...new Set(list)];
-  const body = { systemInstruction: { parts: [{ text: jSystem() }] }, contents: buildContents() };
   let lastStatus = 0, lastMsg = "";
   for(const m of models){
-    let res;
-    try{
-      res = await fetch(
-        "https://generativelanguage.googleapis.com/v1beta/models/" + encodeURIComponent(m) +
-        ":generateContent?key=" + encodeURIComponent(key),
-        { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) }
-      );
-    }catch(e){ throw new Error("NET"); }
+    const url = "https://generativelanguage.googleapis.com/v1beta/models/" + encodeURIComponent(m) +
+      ":generateContent?key=" + encodeURIComponent(key);
+    let res = null, noThink = false;
+    for(let attempt = 0; attempt < 2; attempt++){
+      const body = { systemInstruction: { parts: [{ text: jSystem() }] }, contents: buildContents() };
+      if(!noThink) body.generationConfig = { thinkingConfig: { thinkingBudget: 0 } };
+      const ctl = new AbortController();
+      const tm = setTimeout(() => ctl.abort(), 30000);
+      try{
+        res = await fetch(url, {
+          method: "POST", headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(body), signal: ctl.signal
+        });
+      }catch(e){
+        clearTimeout(tm);
+        throw new Error(e && e.name === "AbortError" ? "TIMEOUT" : "NET");
+      }
+      clearTimeout(tm);
+      if(res.status === 400 && !noThink){
+        let t = "";
+        try{ t = await res.clone().text(); }catch(e){}
+        if(/think/i.test(t)){ noThink = true; continue; }
+      }
+      break;
+    }
     if(res.ok){
       const data = await res.json();
       const parts = (data.candidates && data.candidates[0] && data.candidates[0].content && data.candidates[0].content.parts) || [];
@@ -928,13 +944,20 @@ async function askFree(){
   let lastStatus = 0, lastMsg = "";
   for(const m of models){
     let res;
+    const ctl = new AbortController();
+    const tm = setTimeout(() => ctl.abort(), 30000);
     try{
       res = await fetch("https://text.pollinations.ai/openai?referrer=arasbezir.github.io", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ model: m, messages: buildMessages() })
+        body: JSON.stringify({ model: m, messages: buildMessages() }),
+        signal: ctl.signal
       });
-    }catch(e){ throw new Error("NET"); }
+    }catch(e){
+      clearTimeout(tm);
+      throw new Error(e && e.name === "AbortError" ? "TIMEOUT" : "NET");
+    }
+    clearTimeout(tm);
     const raw = await res.text();
     if(res.ok){
       let txt = "";
@@ -970,11 +993,12 @@ async function askAI(){
 
 function jErrText(e){
   if(e.message === "NET") return "İnternet bağlantısı yok ya da servise ulaşılamadı.";
+  if(e.message === "TIMEOUT") return "Jarvis çok geç cevap verdi. Tekrar dene.";
   if(e.message === "BLOCK") return "Bu isteğe cevap veremedim (güvenlik filtresi).";
   if(e.message === "EMPTY") return "Boş cevap geldi, tekrar dene.";
   const s = e.status;
   if(e.free){
-    if(s === 401 || s === 402 || s === 403) return "Ücretsiz servis artık anahtar istiyor. ⚙️'dan Gemini anahtarı girersen çalışır.";
+    if(s === 401 || s === 402 || s === 403) return "Ücretsiz servis anahtar istiyor. Gemini anahtarı girersen çalışır.";
     if(s === 429) return "Ücretsiz servis yoğun, biraz bekleyip tekrar dene.";
     return "Ücretsiz servis cevap vermedi (" + (s || "?") + "). Biraz sonra dene ya da ⚙️'dan Gemini anahtarı gir.";
   }
@@ -1043,6 +1067,7 @@ async function jSend(text, img){
   }catch(e){
     console.error(e);
     toast(jErrText(e), 7000);
+    if(e.free && (e.status === 401 || e.status === 402 || e.status === 403) && !store("ark_jkey")) openJarvisSettings();
   }
   jSpeakNext = false; jBusy = false;
   jThinking(false);
@@ -1083,14 +1108,14 @@ function openJarvisSettings(){
   av.style.background = "linear-gradient(135deg,#1f7a5a,#2b6cb0)";
   const keyIn = h("input", {
     type: "password", autocomplete: "off", "aria-label": "Gemini anahtarı",
-    placeholder: store("ark_jkey") ? "Anahtar kayıtlı (değiştirmek için yenisini yapıştır)" : "Gemini anahtarı (isteğe bağlı)"
+    placeholder: store("ark_jkey") ? "Anahtar kayıtlı (değiştirmek için yenisini yapıştır)" : "Gemini API anahtarını yapıştır"
   });
   const modelIn = h("input", { "aria-label": "Model adı", placeholder: "Model adı (boş bırak)" });
   modelIn.value = store("ark_jmodel") || "";
   body.append(
     av,
     h("h2", { text: "Jarvis ayarları" }),
-    h("div", { class: "help", text: "Şu an " + (store("ark_jkey") ? "Gemini anahtarın kullanılıyor." : "ücretsiz anahtarsız servis kullanılıyor. Bu modda yazdıkların üçüncü taraf bir servise gider, özel şeyler yazma.") + " Daha kaliteli ve kararlı cevap için isteğe bağlı olarak ücretsiz bir Gemini anahtarı girebilirsin (aistudio.google.com/apikey). Anahtar sadece bu telefonda saklanır." }),
+    h("div", { class: "help", text: "Jarvis'in düzgün çalışması için ücretsiz bir Gemini anahtarı gerekir: aistudio.google.com/apikey adresinde “Create API key” de, çıkan anahtarı aşağıya yapıştır. Anahtar sadece bu telefonda saklanır, sitenin koduna girmez. " + (store("ark_jkey") ? "Şu an anahtarın kayıtlı." : "Şu an anahtar kayıtlı değil, ücretsiz yedek servis denenir ve çoğu zaman çalışmaz.") }),
     h("a", { class: "btn alt", href: "https://aistudio.google.com/apikey", target: "_blank", rel: "noopener", text: "Gemini anahtarı al" }),
     keyIn,
     modelIn,
@@ -1458,4 +1483,4 @@ setInterval(() => { if(!document.hidden && myName) saveMe(true); }, 60000);
 renderHome();
 </script>
 </body>
-</html>
+  </html>
