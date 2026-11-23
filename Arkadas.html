@@ -1,1486 +1,572 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="tr">
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, interactive-widget=resizes-content">
-<meta name="theme-color" content="#1f7a5a">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Arkadaş</title>
 <style>
-:root{
-  --bg:#f2f5f1; --surface:#ffffff; --fg:#18211c; --muted:#6a766f; --line:#dce3de;
-  --accent:#1f7a5a; --accent-fg:#ffffff; --head:#1f7a5a; --head-fg:#ffffff;
-  --mine:#d3f0e0; --mine-fg:#10261b; --theirs:#ffffff; --chatbg:#e8eee8;
-  --danger:#c0392b;
-  color-scheme: light;
-}
-@media (prefers-color-scheme: dark){
-  :root{
-    --bg:#0f1512; --surface:#18211c; --fg:#e8efea; --muted:#92a199; --line:#2a3731;
-    --accent:#34b583; --accent-fg:#07130d; --head:#17382d; --head-fg:#ffffff;
-    --mine:#1f5f48; --mine-fg:#ffffff; --theirs:#1f2b25; --chatbg:#0c110f;
-    --danger:#e57368;
-    color-scheme: dark;
-  }
-}
-*{box-sizing:border-box}
-[hidden]{display:none!important}
-html,body{height:100%;margin:0}
-body{
-  background:var(--bg); color:var(--fg);
-  font:16px/1.4 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
-  display:flex; flex-direction:column; -webkit-text-size-adjust:100%; overscroll-behavior:none;
-}
-button{font:inherit; color:inherit; cursor:pointer; -webkit-tap-highlight-color:transparent}
-.view{display:none; flex:1; min-height:0; flex-direction:column}
-.view.on{display:flex}
-.top{
-  display:flex; align-items:center; gap:8px; padding:10px 12px;
-  padding-top:calc(10px + env(safe-area-inset-top,0px));
-  background:var(--head); color:var(--head-fg);
-}
-.top h1{margin:0; font-size:1.2rem; flex:1; letter-spacing:.01em}
-.ghost{background:none; border:0; color:var(--head-fg); font-size:1.3rem; padding:6px 8px; border-radius:10px}
-.avatar{
-  display:inline-flex; align-items:center; justify-content:center; flex:none;
-  width:44px; height:44px; border-radius:50%; color:#fff; font-weight:700; font-size:1.1rem;
-  border:0; padding:0;
-}
-.avatar.sm{width:38px; height:38px; font-size:1rem}
-.avatar.lg{width:84px; height:84px; font-size:2rem}
-.tabs{display:flex; background:var(--surface); border-bottom:1px solid var(--line)}
-.tabs button{
-  flex:1; background:none; border:0; padding:12px; color:var(--muted); font-weight:600;
-  border-bottom:3px solid transparent;
-}
-.tabs button.on{color:var(--accent); border-bottom-color:var(--accent)}
-.list{flex:1; min-height:0; overflow-y:auto; display:flex; flex-direction:column}
-.row{
-  display:flex; align-items:center; gap:12px; padding:12px 14px;
-  background:var(--surface); border-bottom:1px solid var(--line);
-}
-.row-mid{flex:1; min-width:0}
-.row-name{font-weight:600}
-.row-sub{font-size:.85rem; color:var(--muted); white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
-.row-sub.bold{color:var(--fg); font-weight:600}
-.row-end{display:flex; flex-direction:column; align-items:flex-end; gap:6px; font-size:.75rem; color:var(--muted)}
-.dot{width:10px; height:10px; border-radius:50%; background:var(--accent)}
-.pill{border:0; background:var(--accent); color:var(--accent-fg); padding:8px 16px; border-radius:999px; font-weight:600}
-.empty{margin:auto; padding:32px 24px; color:var(--muted); text-align:center; max-width:32ch}
-.peer{
-  flex:1; min-width:0; display:flex; align-items:center; gap:10px; background:none; border:0;
-  color:var(--head-fg); text-align:left; padding:0;
-}
-.peer-txt{display:flex; flex-direction:column; min-width:0}
-.peer-txt b{font-size:1.02rem; white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
-.peer-txt small{font-size:.75rem; opacity:.85}
-.msgs{
-  flex:1; min-height:0; overflow-y:auto; padding:12px;
-  display:flex; flex-direction:column; gap:6px; background:var(--chatbg);
-}
-.msg{max-width:82%; display:flex; flex-direction:column; gap:2px}
-.msg.mine{align-self:flex-end; align-items:flex-end}
-.msg.theirs{align-self:flex-start; align-items:flex-start}
-.bubble{
-  padding:8px 12px; border-radius:16px; overflow-wrap:anywhere; white-space:pre-wrap;
-  background:var(--theirs); border:1px solid var(--line);
-}
-.mine .bubble{background:var(--mine); color:var(--mine-fg); border-color:transparent; border-bottom-right-radius:4px}
-.theirs .bubble{border-bottom-left-radius:4px}
-.bubble.gone{font-style:italic; color:var(--muted); background:transparent}
-.bubble.photo{padding:4px}
-.bubble img{display:block; max-width:100%; width:240px; height:auto; border-radius:12px}
-.time{font-size:.7rem; color:var(--muted); padding:0 4px}
-.del{
-  display:none; background:var(--surface); border:1px solid var(--line); color:var(--danger);
-  border-radius:999px; padding:4px 10px; font-size:.8rem;
-}
-.msg.sel .del{display:inline-block}
-.typing{display:none; align-items:center; gap:6px; padding:4px 16px 6px; font-size:.8rem; color:var(--muted); background:var(--chatbg)}
-.typing.on{display:flex}
-.dots{display:inline-flex; gap:3px}
-.dots i{width:6px; height:6px; border-radius:50%; background:var(--muted); animation:tdot 1.2s infinite ease-in-out}
-.dots i:nth-child(2){animation-delay:.2s}
-.dots i:nth-child(3){animation-delay:.4s}
-@keyframes tdot{0%,60%,100%{opacity:.3; transform:translateY(0)}30%{opacity:1; transform:translateY(-3px)}}
-#composer,#jcomposer{
-  display:flex; align-items:flex-end; gap:8px; padding:8px 10px;
-  padding-bottom:calc(8px + env(safe-area-inset-bottom,0px));
-  background:var(--surface); border-top:1px solid var(--line);
-}
-#text,#jtext{
-  flex:1; min-width:0; resize:none; max-height:120px; font:inherit; color:var(--fg);
-  background:var(--bg); border:1px solid var(--line); border-radius:20px; padding:10px 14px;
-}
-.icon-btn,.send{flex:none; height:42px; border-radius:21px; border:0}
-.icon-btn{width:42px; background:var(--bg); border:1px solid var(--line); font-size:1.15rem}
-.icon-btn.rec{background:#c0392b; color:#fff; border-color:#c0392b}
-.send{padding:0 18px; background:var(--accent); color:var(--accent-fg); font-weight:600}
-.overlay{position:fixed; inset:0; z-index:10; background:rgba(0,0,0,.45); display:flex; align-items:flex-end; justify-content:center}
-.overlay.dark{background:rgba(0,0,0,.92); align-items:center; z-index:15}
-.overlay.dark img{max-width:100%; max-height:100%}
-.sheet{
-  width:100%; max-width:480px; background:var(--surface); border-radius:20px 20px 0 0;
-  padding:20px 18px; padding-bottom:calc(20px + env(safe-area-inset-bottom,0px));
-  max-height:88%; overflow-y:auto;
-}
-.sheet-in{display:flex; flex-direction:column; align-items:center; gap:12px; text-align:center}
-.sheet h2{margin:0}
-.sub{color:var(--muted); font-size:.85rem}
-.btn{
-  display:block; width:100%; border:0; border-radius:12px; padding:12px; background:var(--accent);
-  color:var(--accent-fg); font-weight:600; text-align:center; text-decoration:none;
-}
-.btn.alt{background:var(--bg); color:var(--fg); border:1px solid var(--line)}
-.btn.bad{background:none; color:var(--danger); border:1px solid var(--line)}
-.sheet input{
-  width:100%; font:inherit; color:var(--fg); background:var(--bg); border:1px solid var(--line);
-  border-radius:12px; padding:12px 14px; text-align:center;
-}
-.code{
-  width:100%; word-break:break-all; background:var(--bg); border:1px solid var(--line);
-  border-radius:10px; padding:8px; font-family:ui-monospace,monospace; font-size:.85rem;
-}
-.help{font-size:.8rem; color:var(--muted); text-align:left; width:100%}
-#toast{
-  position:fixed; left:50%; bottom:calc(90px + env(safe-area-inset-bottom,0px)); transform:translateX(-50%);
-  z-index:40; background:#222; color:#fff; padding:10px 16px; border-radius:12px; font-size:.9rem;
-  max-width:90%; text-align:center;
-}
-#name-screen{
-  position:fixed; inset:0; z-index:30; background:var(--bg);
-  display:flex; align-items:center; justify-content:center; padding:24px;
-}
-#name-box{width:100%; max-width:340px; display:flex; flex-direction:column; gap:12px}
-#name-box h2{margin:0; font-size:1.5rem}
-#name-box p{margin:0; color:var(--muted)}
-#name-box input{
-  font:inherit; color:var(--fg); background:var(--surface); border:1px solid var(--line);
-  border-radius:12px; padding:12px 14px;
-}
-#name-box button{font-weight:600; border:0; border-radius:12px; padding:12px; background:var(--accent); color:var(--accent-fg)}
-.callui{
-  position:fixed; inset:0; z-index:20; background:#0b1210; color:#fff;
-  display:flex; flex-direction:column; align-items:center; justify-content:space-between;
-  padding:48px 24px calc(36px + env(safe-area-inset-bottom,0px));
-}
-.callui video{position:absolute; display:none; background:#000}
-#rv{inset:0; width:100%; height:100%; object-fit:cover}
-#lv{
-  right:12px; top:calc(12px + env(safe-area-inset-top,0px)); width:96px; height:136px;
-  object-fit:cover; border-radius:12px; transform:scaleX(-1); z-index:2;
-}
-.callui.video video{display:block}
-.call-info{position:relative; z-index:1; display:flex; flex-direction:column; align-items:center; gap:10px; margin-top:40px}
-.callui.video.connected #c-av, .callui.video.connected #c-name{display:none}
-#c-name{font-size:1.6rem; font-weight:700}
-#c-state{opacity:.9; text-shadow:0 1px 4px #000}
-.call-actions{position:relative; z-index:1; display:flex; gap:22px}
-.cbtn{display:flex; flex-direction:column; align-items:center; gap:6px; border:0; background:none; color:#fff; font-size:.8rem}
-.ci{
-  width:64px; height:64px; border-radius:50%; background:#33403a;
-  display:flex; align-items:center; justify-content:center; font-size:1.6rem;
-}
-.cbtn.danger .ci{background:#c0392b}
-.cbtn.ok .ci{background:#1f9d6b}
-.cbtn.off .ci{opacity:.45}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;height:100%;background:#0f1115;color:#eee;font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif}
+.hidden{display:none!important}
+.screen{display:none;height:100dvh;flex-direction:column}
+.screen.active{display:flex}
+header{display:flex;align-items:center;gap:8px;padding:10px 12px;background:#181b22;border-bottom:1px solid #262a33}
+header .sp{flex:1}
+header .tt{flex:1;display:flex;flex-direction:column;min-width:0}
+header small{color:#8a93a6;font-size:12px;min-height:14px}
+.ic{background:none;border:0;color:#eee;font-size:22px;padding:6px 8px;cursor:pointer}
+.scroll{flex:1;overflow-y:auto;padding:12px}
+h3{margin:18px 0 8px;font-size:13px;color:#8a93a6;text-transform:uppercase;letter-spacing:.05em}
+.center{margin:auto;width:min(320px,90%);text-align:center}
+.center h1{font-size:34px;margin:0 0 6px}
+.center p{color:#8a93a6;margin:0 0 18px}
+input[type=text],input:not([type]){width:100%;padding:13px;border-radius:12px;border:1px solid #2c313c;background:#1a1d25;color:#eee;font-size:16px;outline:none}
+.btn{width:100%;margin-top:12px;padding:13px;border:0;border-radius:12px;background:#4f8cff;color:#fff;font-size:16px;font-weight:600;cursor:pointer}
+.btn.alt{background:#262a33}
+.row{display:flex;align-items:center;gap:12px;padding:11px;border-radius:14px;background:#181b22;margin-bottom:8px;cursor:pointer}
+.row .nm{flex:1;font-size:16px}
+.av{width:40px;height:40px;border-radius:50%;background:#4f8cff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:18px;flex:none}
+.add{background:#262a33;border:0;color:#fff;padding:8px 14px;border-radius:10px;font-size:14px;cursor:pointer}
+.empty{color:#6b7385;font-size:14px;padding:6px 2px}
+#msgs{display:flex;flex-direction:column;gap:6px}
+.m{max-width:78%;padding:8px 11px;border-radius:16px;background:#1f232c;align-self:flex-start;word-wrap:break-word;overflow-wrap:anywhere}
+.m.me{background:#2b5fd9;align-self:flex-end}
+.m img{display:block;max-width:100%;max-height:300px;border-radius:10px;margin-bottom:2px}
+.m time{display:block;font-size:10px;opacity:.6;text-align:right;margin-top:2px}
+.bar{display:flex;align-items:center;gap:4px;padding:8px 8px calc(8px + env(safe-area-inset-bottom));background:#181b22;border-top:1px solid #262a33}
+.bar input{flex:1}
+.send{background:#4f8cff;border:0;color:#fff;width:44px;height:44px;border-radius:50%;font-size:18px;cursor:pointer;flex:none}
+.typing{padding:6px 16px;display:flex;gap:4px;background:#0f1115}
+.typing span{width:7px;height:7px;border-radius:50%;background:#8a93a6;animation:b 1.2s infinite}
+.typing span:nth-child(2){animation-delay:.2s}.typing span:nth-child(3){animation-delay:.4s}
+@keyframes b{0%,60%,100%{opacity:.3;transform:translateY(0)}30%{opacity:1;transform:translateY(-4px)}}
+.overlay{position:fixed;inset:0;background:rgba(0,0,0,.7);display:flex;align-items:center;justify-content:center;z-index:50;padding:16px}
+.card{background:#181b22;border-radius:18px;padding:20px;width:min(380px,100%);max-height:90vh;overflow-y:auto}
+.card h2{margin:0 0 10px;font-size:20px}
+.card ol{padding-left:20px;line-height:1.5;color:#cfd4df}
+.topic{background:#0f1115;border-radius:10px;padding:10px;font-family:monospace;word-break:break-all;margin:10px 0;font-size:14px}
+#viewer img{max-width:100%;max-height:100%}
+#callUI{position:fixed;inset:0;background:#0b0d11;z-index:60;display:flex;flex-direction:column;align-items:center}
+#remoteV{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;background:#000}
+#localV{position:absolute;right:12px;top:12px;width:100px;height:140px;object-fit:cover;border-radius:12px;background:#222;z-index:2;transform:scaleX(-1)}
+#callInfo{position:relative;z-index:2;margin-top:70px;text-align:center;text-shadow:0 1px 6px #000}
+#callInfo .av{width:96px;height:96px;font-size:40px;margin:0 auto 14px}
+#callName{font-size:24px;font-weight:700}
+#callStatus{color:#cfd4df;margin-top:4px}
+#callBtns{position:absolute;bottom:calc(40px + env(safe-area-inset-bottom));display:flex;gap:26px;z-index:2}
+.cb{width:66px;height:66px;border-radius:50%;border:0;font-size:26px;color:#fff;background:#333a46;cursor:pointer}
+.cb.red{background:#e5484d}.cb.green{background:#30a46c}.cb.off{background:#fff;color:#000}
+#toast{position:fixed;left:50%;bottom:90px;transform:translateX(-50%);background:#262a33;color:#fff;padding:10px 16px;border-radius:12px;z-index:99;font-size:14px;max-width:90%;text-align:center}
 </style>
 </head>
 <body>
 
-<div id="home" class="view on">
-  <header class="top">
-    <h1>Arkadaş</h1>
-    <button id="me-btn" class="avatar sm" type="button" aria-label="Profilim"></button>
-  </header>
-  <nav class="tabs">
-    <button id="tab-chats" type="button" class="on">Sohbetler</button>
-    <button id="tab-add" type="button">Ekle</button>
-  </nav>
-  <div id="home-list" class="list"></div>
-</div>
-
-<div id="chat" class="view">
-  <header class="top">
-    <button id="back" class="ghost" type="button" aria-label="Geri">←</button>
-    <button id="peer" class="peer" type="button">
-      <span id="peer-av" class="avatar sm"></span>
-      <span class="peer-txt"><b id="peer-name"></b><small id="peer-status"></small></span>
-    </button>
-    <button id="vcall" class="ghost" type="button" aria-label="Görüntülü ara">📹</button>
-    <button id="acall" class="ghost" type="button" aria-label="Sesli ara">📞</button>
-  </header>
-  <div id="msgs" class="msgs"></div>
-  <div id="typing" class="typing"><span>yazıyor</span><span class="dots"><i></i><i></i><i></i></span></div>
-  <form id="composer" autocomplete="off">
-    <input type="file" id="file-gal" accept="image/*" hidden>
-    <input type="file" id="file-cam" accept="image/*" capture="environment" hidden>
-    <button class="icon-btn" id="b-cam" type="button" aria-label="Fotoğraf çek">📷</button>
-    <button class="icon-btn" id="b-gal" type="button" aria-label="Galeriden gönder">🖼️</button>
-    <textarea id="text" rows="1" placeholder="Mesaj yaz" aria-label="Mesaj"></textarea>
-    <button class="send" type="submit">Gönder</button>
-  </form>
-</div>
-
-<div id="jarvis" class="view">
-  <header class="top">
-    <button id="j-back" class="ghost" type="button" aria-label="Geri">←</button>
-    <div class="peer" style="cursor:default">
-      <span id="j-av" class="avatar sm">🤖</span>
-      <span class="peer-txt"><b>Jarvis</b><small id="j-status">hazır</small></span>
-    </div>
-    <button id="j-voice" class="ghost" type="button" aria-label="Sesli cevap">🔇</button>
-    <button id="j-set" class="ghost" type="button" aria-label="Ayarlar">⚙️</button>
-  </header>
-  <div id="jmsgs" class="msgs"></div>
-  <div id="jtyping" class="typing"><span>Jarvis düşünüyor</span><span class="dots"><i></i><i></i><i></i></span></div>
-  <form id="jcomposer" autocomplete="off">
-    <input type="file" id="jfile" accept="image/*" hidden>
-    <button class="icon-btn" id="j-att" type="button" aria-label="Fotoğraf ekle">📎</button>
-    <button class="icon-btn" id="j-mic" type="button" aria-label="Konuş">🎤</button>
-    <textarea id="jtext" rows="1" placeholder="Jarvis'e yaz…" aria-label="Mesaj"></textarea>
-    <button class="send" type="submit">Gönder</button>
-  </form>
-</div>
-
-<div id="sheet" class="overlay" hidden><div class="sheet"><div id="sheet-body" class="sheet-in"></div></div></div>
-<div id="viewer" class="overlay dark" hidden><img id="viewer-img" alt="Fotoğraf"></div>
-<div id="toast" hidden></div>
-
-<div id="name-screen" hidden>
-  <form id="name-box">
-    <h2>Adın ne?</h2>
-    <p>Arkadaşların seni bu adla görecek.</p>
-    <input id="name-input" maxlength="20" placeholder="Örn. Aras" aria-label="Adın" required>
-    <button type="submit">Başla</button>
-  </form>
-</div>
-
-<div id="call" class="callui" hidden>
-  <video id="rv" autoplay playsinline></video>
-  <video id="lv" autoplay playsinline muted></video>
-  <div class="call-info">
-    <div id="c-av" class="avatar lg"></div>
-    <div id="c-name"></div>
-    <div id="c-state"></div>
+<div id="login" class="screen active">
+  <div class="center">
+    <h1>👋 Arkadaş</h1>
+    <p>İsmini yaz ve gir</p>
+    <input id="nameIn" placeholder="İsmin" maxlength="20" autocomplete="off">
+    <button id="loginBtn" class="btn">Gir</button>
   </div>
-  <div id="c-actions" class="call-actions"></div>
 </div>
 
+<div id="home" class="screen">
+  <header>
+    <b id="hiName"></b><span class="sp"></span>
+    <button id="bellBtn" class="ic" title="Bildirim">🔔</button>
+    <button id="outBtn" class="ic" title="Çıkış">⎋</button>
+  </header>
+  <div class="scroll">
+    <h3>Arkadaşlarım</h3>
+    <div id="friends"></div>
+    <h3>Arkadaş ekle</h3>
+    <div id="others"></div>
+  </div>
+</div>
+
+<div id="chat" class="screen">
+  <header>
+    <button id="backBtn" class="ic">←</button>
+    <div class="av" id="chatAv"></div>
+    <div class="tt"><b id="chatTitle"></b><small id="chatSub"></small></div>
+    <button id="callA" class="ic" title="Sesli ara">📞</button>
+    <button id="callV" class="ic" title="Görüntülü ara">🎥</button>
+  </header>
+  <div id="msgs" class="scroll"></div>
+  <div id="typingBar" class="typing hidden"><span></span><span></span><span></span></div>
+  <div class="bar">
+    <button id="camBtn" class="ic" title="Kamera">📷</button>
+    <button id="galBtn" class="ic" title="Galeri">🖼️</button>
+    <input id="msgIn" placeholder="Mesaj yaz…" autocomplete="off">
+    <button id="sendBtn" class="send">➤</button>
+  </div>
+  <input type="file" id="camFile" accept="image/*" capture="environment" hidden>
+  <input type="file" id="galFile" accept="image/*" hidden>
+</div>
+
+<!-- ntfy bilgi penceresi -->
+<div id="ntfyModal" class="overlay hidden">
+  <div class="card">
+    <h2>🔔 Bildirim kurulumu</h2>
+    <p style="margin:0;color:#cfd4df">Ekran kilitliyken ya da site kapalıyken mesaj ve arama bildirimi gelsin diye:</p>
+    <ol>
+      <li>Telefona ücretsiz <b>ntfy</b> uygulamasını kur (Play Store / App Store)</li>
+      <li>Uygulamada <b>+</b> bas, aşağıdaki konu adını yapıştır, <b>Subscribe</b></li>
+      <li>Bildirim iznini ver. Androidde ntfy için pil tasarrufunu kapat</li>
+    </ol>
+    <div class="topic" id="topicTxt"></div>
+    <button id="copyTopic" class="btn">Konu adını kopyala</button>
+    <button id="testNtfy" class="btn alt">Test bildirimi gönder</button>
+    <button id="closeNtfy" class="btn alt">Kapat</button>
+  </div>
+</div>
+
+<!-- foto görüntüleyici -->
+<div id="viewer" class="overlay hidden"><img id="viewerImg" alt=""></div>
+
+<!-- gelen arama -->
+<div id="incoming" class="overlay hidden" style="z-index:70">
+  <div class="card" style="text-align:center">
+    <div class="av" id="incAv" style="width:80px;height:80px;font-size:34px;margin:0 auto 12px"></div>
+    <h2 id="incName"></h2>
+    <p id="incType" style="color:#8a93a6;margin:0 0 18px"></p>
+    <div style="display:flex;gap:24px;justify-content:center">
+      <button id="declineBtn" class="cb red">✕</button>
+      <button id="acceptBtn" class="cb green">✓</button>
+    </div>
+  </div>
+</div>
+
+<!-- arama ekranı -->
+<div id="callUI" class="hidden">
+  <video id="remoteV" autoplay playsinline></video>
+  <video id="localV" autoplay playsinline muted></video>
+  <div id="callInfo">
+    <div class="av" id="callAv"></div>
+    <div id="callName"></div>
+    <div id="callStatus"></div>
+  </div>
+  <div id="callBtns">
+    <button id="muteBtn" class="cb">🎤</button>
+    <button id="hangBtn" class="cb red">📵</button>
+  </div>
+</div>
+
+<div id="toast" class="hidden"></div>
+
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script>
-function arkErr(m){
-  var d=document.createElement("div");
-  d.style.cssText="position:fixed;left:0;right:0;bottom:0;z-index:99;background:#b00020;color:#fff;padding:8px 10px;font:12px/1.3 monospace;word-break:break-all";
-  d.textContent="Hata: "+m;
-  (document.body||document.documentElement).appendChild(d);
-}
-window.addEventListener("error",function(e){ arkErr((e.message||"dosya yüklenemedi")+(e.lineno?" (satır "+e.lineno+")":"")); },true);
-window.addEventListener("unhandledrejection",function(e){ arkErr(String(e.reason&&e.reason.message||e.reason)); });
-</script>
-
-<script type="module">
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js";
-import {
-  getFirestore, collection, doc, addDoc, setDoc, updateDoc, onSnapshot, query,
-  orderBy, limit, where, serverTimestamp, arrayUnion, arrayRemove
-} from "https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js";
-
+// ====== AYARLAR ======
 const firebaseConfig = {
-  apiKey: "AIzaSyAj8McuEIan1LTx9NzXb5NZ73Dq_NSepHY",
+  apiKey: "API_KEY_BURAYA",
   authDomain: "arkadas-app-f3e00.firebaseapp.com",
-  projectId: "arkadas-app-f3e00",
-  storageBucket: "arkadas-app-f3e00.firebasestorage.app",
-  messagingSenderId: "253421208511",
-  appId: "1:253421208511:web:26a6789da8c999d829970a"
+  projectId: "arkadas-app-f3e00"
 };
-const app = initializeApp(firebaseConfig);
-const db = getFirestore(app);
+const TOPIC_SECRET = "x7q2m9kd4w"; // ntfy konu adının gizli kısmı
+// =====================
 
-/* ---------- yardımcılar ---------- */
-const $ = (id) => document.getElementById(id);
+firebase.initializeApp(firebaseConfig);
+const db = firebase.firestore();
+const FV = firebase.firestore.FieldValue;
+const $ = id => document.getElementById(id);
+const esc = s => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const slug = s => s.toLowerCase().replace(/ç/g,'c').replace(/ğ/g,'g').replace(/ı/g,'i').replace(/ö/g,'o').replace(/ş/g,'s').replace(/ü/g,'u').replace(/[^a-z0-9]/g,'');
+const fmtTime = t => new Date(t).toLocaleTimeString('tr-TR',{hour:'2-digit',minute:'2-digit'});
+const initial = n => (n||'?').trim().charAt(0).toLocaleUpperCase('tr-TR');
 
-function h(tag, props, ...kids){
-  const el = document.createElement(tag);
-  for(const [k, v] of Object.entries(props || {})){
-    if(v == null || v === false) continue;
-    if(k === "class") el.className = v;
-    else if(k === "text") el.textContent = v;
-    else if(k.startsWith("on")) el.addEventListener(k.slice(2), v);
-    else el.setAttribute(k, v === true ? "" : v);
-  }
-  for(const kid of kids.flat()){ if(kid != null) el.append(kid); }
-  return el;
+let me = null, meName = '', users = {};
+let cid = null, chatFriend = null, unsubMsgs = null, unsubChat = null, unsubCalls = null, unsubUsers = null;
+let typingTs = 0, lastTypingSent = 0, firstRender = true;
+
+function toast(t){
+  const el = $('toast'); el.textContent = t; el.classList.remove('hidden');
+  clearTimeout(toast.t); toast.t = setTimeout(()=>el.classList.add('hidden'), 3000);
 }
-
-function store(key, value){
-  try{ if(value === undefined) return localStorage.getItem(key); localStorage.setItem(key, value); }
-  catch(e){ return null; }
-}
-
-let toastT = null;
-function toast(msg, ms){
-  const t = $("toast");
-  t.textContent = msg; t.hidden = false;
-  clearTimeout(toastT);
-  toastT = setTimeout(() => { t.hidden = true; }, ms || 4000);
+function show(id){
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  $(id).classList.add('active');
 }
 
-function colorOf(id){
-  let x = 0;
-  for(const ch of String(id)) x = (x * 31 + ch.charCodeAt(0)) >>> 0;
-  return "hsl(" + (x % 360) + " 50% 40%)";
-}
-function applyAvatar(el, id, name){
-  el.style.background = colorOf(id);
-  el.textContent = (name || "?").trim().charAt(0).toUpperCase() || "?";
-}
-function avatar(id, name, cls){
-  const el = h("span", { class: "avatar " + (cls || "") });
-  applyAvatar(el, id, name);
-  return el;
-}
-
-function fmtTime(x){
-  if(!x) return "";
-  const d = x instanceof Date ? x : new Date(x);
-  return d.toLocaleTimeString("tr-TR", { hour: "2-digit", minute: "2-digit" });
-}
-function presence(u){
-  if(!u || !u.lastSeen) return "";
-  if(Date.now() - u.lastSeen < 100000) return "çevrimiçi";
-  const d = new Date(u.lastSeen);
-  const same = d.toDateString() === new Date().toDateString();
-  const day = same ? "" : d.toLocaleDateString("tr-TR", { day: "numeric", month: "short" }) + " ";
-  return "son görülme " + day + fmtTime(d);
-}
-function autosize(el){
-  el.style.height = "auto";
-  el.style.height = Math.min(el.scrollHeight, 120) + "px";
-}
-
-/* ---------- kimlik ---------- */
-let myName = store("ark_name") || "";
-let myId = store("ark_id");
-if(!myId){
-  myId = Math.random().toString(36).slice(2) + Date.now().toString(36);
-  store("ark_id", myId);
-}
-const chatIdOf = (a, b) => [a, b].sort().join("_");
-const topicOf = (id) => "arkadas-" + String(id).slice(0, 12);
-const userRef = (id) => doc(db, "users", id);
-
-/* ---------- durum ---------- */
-let users = {}, chats = {}, tab = "chats";
-let peerId = null, unsubMsgs = null, msgDocs = [], firstRender = true, marked = {};
-let lastPing = 0, idleT = null;
-let jOpen = false, jFirst = true, jBusy = false, jSpeakNext = false, jModelG = null, jModelF = null;
-let jHist = [];
-try{ jHist = JSON.parse(store("ark_jhist") || "[]"); if(!Array.isArray(jHist)) jHist = []; }catch(e){ jHist = []; }
-
-async function saveMe(quiet){
-  if(!myName) return;
+// ====== ntfy ======
+const topicFor = id => 'arkadas-' + TOPIC_SECRET + '-' + id;
+function notify(toId, title, message, priority){
   try{
-    await setDoc(userRef(myId), { name: myName, lastSeen: Date.now() }, { merge: true });
+    fetch('https://ntfy.sh', {
+      method:'POST',
+      body: JSON.stringify({
+        topic: topicFor(toId), title, message,
+        priority: priority || 3,
+        click: location.href.split('#')[0]
+      })
+    }).catch(()=>{});
+  }catch(e){}
+}
+function openNtfy(){
+  $('topicTxt').textContent = topicFor(me);
+  $('ntfyModal').classList.remove('hidden');
+  localStorage.setItem('ark_ntfy_seen','1');
+}
+$('bellBtn').onclick = openNtfy;
+$('closeNtfy').onclick = () => $('ntfyModal').classList.add('hidden');
+$('copyTopic').onclick = async () => {
+  try{ await navigator.clipboard.writeText(topicFor(me)); toast('Kopyalandı'); }
+  catch(e){ toast('Konu adına basılı tutup kopyala'); }
+};
+$('testNtfy').onclick = () => { notify(me, 'Test', 'Bildirim çalışıyor ✅', 4); toast('Gönderildi, telefona bak'); };
+
+// ====== Giriş ======
+$('loginBtn').onclick = () => {
+  const name = $('nameIn').value.trim();
+  const id = slug(name);
+  if(!id){ toast('Geçerli bir isim yaz'); return; }
+  localStorage.setItem('ark_name', name);
+  start(name, id);
+};
+$('nameIn').addEventListener('keydown', e => { if(e.key==='Enter') $('loginBtn').click(); });
+$('outBtn').onclick = () => {
+  if(!confirm('Çıkış yapılsın mı?')) return;
+  localStorage.removeItem('ark_name');
+  location.reload();
+};
+
+async function start(name, id){
+  me = id; meName = name;
+  try{
+    await db.collection('v2users').doc(id).set({name, id, seen: Date.now()}, {merge:true});
   }catch(e){
-    console.error(e);
-    if(!quiet) toast("Bağlantı sorunu. İnterneti ve Firestore izinlerini kontrol et.");
+    toast('Bağlanamadı: ' + (e.message||e)); return;
   }
-}
-
-function showNameScreen(){
-  $("name-input").value = myName;
-  $("name-screen").hidden = false;
-  $("name-input").focus();
-}
-$("name-box").addEventListener("submit", (e) => {
-  e.preventDefault();
-  const v = $("name-input").value.trim();
-  if(!v) return;
-  myName = v;
-  store("ark_name", v);
-  $("name-screen").hidden = true;
-  applyAvatar($("me-btn"), myId, myName);
-  saveMe();
-});
-
-/* ---------- dinleyiciler ---------- */
-onSnapshot(collection(db, "users"), (snap) => {
-  users = {};
-  snap.forEach((s) => { users[s.id] = s.data(); });
-  renderHome();
-  refreshPeer();
-}, (err) => { console.error(err); toast("Kişiler yüklenemedi. Firestore izinlerini kontrol et."); });
-
-onSnapshot(query(collection(db, "chats"), where("members", "array-contains", myId)), (snap) => {
-  chats = {};
-  snap.forEach((s) => { chats[s.id] = s.data(); });
-  renderHome();
-  updateTyping();
-  markRead();
-}, (err) => { console.error(err); });
-
-/* ---------- ana ekran ---------- */
-const friendsList = () => (users[myId] && users[myId].friends) || [];
-
-$("tab-chats").addEventListener("click", () => { tab = "chats"; renderHome(); });
-$("tab-add").addEventListener("click", () => { tab = "add"; renderHome(); });
-$("me-btn").addEventListener("click", () => openProfile(myId));
-
-function jarvisRow(){
-  const last = jHist[jHist.length - 1];
-  const av = h("span", { class: "avatar", text: "🤖" });
-  av.style.background = "linear-gradient(135deg,#1f7a5a,#2b6cb0)";
-  const sub = last ? (last.role === "user" ? "Sen: " : "") + String(last.text || "").slice(0, 60) : "Sor, konuş, ne istersen yap";
-  return h("div", { class: "row", role: "button", onclick: openJarvis },
-    av,
-    h("div", { class: "row-mid" },
-      h("div", { class: "row-name", text: "Jarvis ✨" }),
-      h("div", { class: "row-sub", text: sub })),
-    h("div", { class: "row-end" }, h("div", { text: last ? fmtTime(last.t) : "" })));
-}
-
-function renderHome(){
-  $("tab-chats").classList.toggle("on", tab === "chats");
-  $("tab-add").classList.toggle("on", tab === "add");
-  const box = $("home-list");
-  box.textContent = "";
-  const fr = friendsList().filter((id) => users[id]);
-
-  if(tab === "chats"){
-    box.append(jarvisRow());
-    if(!fr.length){
-      box.append(h("div", { class: "empty", text: "Henüz arkadaşın yok. “Ekle” sekmesinden arkadaşlarını ekle." }));
-      return;
-    }
-    const rows = fr.map((id) => ({ id, u: users[id], c: chats[chatIdOf(myId, id)] || {} }));
-    rows.sort((a, b) =>
-      (b.c.lastTs || 0) - (a.c.lastTs || 0) ||
-      (a.u.name || "").localeCompare(b.u.name || "", "tr"));
-    for(const r of rows){
-      const unread = r.c.lastTs && r.c.lastFrom !== myId &&
-        r.c.lastTs > ((r.c.read && r.c.read[myId]) || 0);
-      const av = avatar(r.id, r.u.name);
-      av.addEventListener("click", (e) => { e.stopPropagation(); openProfile(r.id); });
-      const preview = r.c.lastText
-        ? (r.c.lastFrom === myId ? "Sen: " : "") + r.c.lastText
-        : "Mesaj yazmak için dokun";
-      box.append(h("div", { class: "row", role: "button", onclick: () => openChat(r.id) },
-        av,
-        h("div", { class: "row-mid" },
-          h("div", { class: "row-name", text: r.u.name || "Biri" }),
-          h("div", { class: "row-sub" + (unread ? " bold" : ""), text: preview })),
-        h("div", { class: "row-end" },
-          h("div", { text: r.c.lastTs ? fmtTime(r.c.lastTs) : "" }),
-          unread ? h("span", { class: "dot" }) : null)));
-    }
-  } else {
-    const others = Object.keys(users).filter((id) => id !== myId && !fr.includes(id));
-    if(!others.length){
-      box.append(h("div", { class: "empty", text: "Eklenecek kimse yok. Arkadaşların siteyi açıp adını yazınca burada görünür." }));
-      return;
-    }
-    for(const id of others){
-      const u = users[id];
-      box.append(h("div", { class: "row" },
-        avatar(id, u.name),
-        h("div", { class: "row-mid" },
-          h("div", { class: "row-name", text: u.name || "Biri" }),
-          h("div", { class: "row-sub", text: presence(u) })),
-        h("button", { class: "pill", type: "button", text: "Ekle", onclick: () => addFriend(id) })));
-    }
-  }
-}
-
-async function addFriend(id){
-  try{
-    await setDoc(userRef(myId), { friends: arrayUnion(id) }, { merge: true });
-    await setDoc(userRef(id), { friends: arrayUnion(myId) }, { merge: true });
-    toast((users[id] && users[id].name || "Arkadaş") + " eklendi");
-    tab = "chats";
+  $('hiName').textContent = name;
+  show('home');
+  unsubUsers = db.collection('v2users').onSnapshot(s => {
+    users = {}; s.forEach(d => users[d.id] = d.data());
     renderHome();
-  }catch(e){ console.error(e); toast("Eklenemedi. Tekrar dene."); }
-}
-async function removeFriend(id){
-  if(!confirm("Arkadaşlıktan çıkarılsın mı?")) return;
-  try{
-    await setDoc(userRef(myId), { friends: arrayRemove(id) }, { merge: true });
-    await setDoc(userRef(id), { friends: arrayRemove(myId) }, { merge: true });
-    closeSheet();
-    if(peerId === id) history.back();
-  }catch(e){ console.error(e); toast("İşlem yapılamadı."); }
+  });
+  listenCalls();
+  if(!localStorage.getItem('ark_ntfy_seen')) openNtfy();
 }
 
-/* ---------- profil ---------- */
-function closeSheet(){ $("sheet").hidden = true; }
-$("sheet").addEventListener("click", (e) => { if(e.target.id === "sheet") closeSheet(); });
-
-function openProfile(id){
-  const body = $("sheet-body");
-  body.textContent = "";
-  if(id === myId){
-    const nameIn = h("input", { maxlength: "20", "aria-label": "Adın" });
-    nameIn.value = myName;
-    const topic = topicOf(myId);
-    body.append(
-      avatar(myId, myName, "lg"),
-      h("h2", { text: "Profilim" }),
-      nameIn,
-      h("button", { class: "btn", type: "button", text: "Kaydet", onclick: () => {
-        const v = nameIn.value.trim();
-        if(!v) return;
-        myName = v; store("ark_name", v); saveMe();
-        applyAvatar($("me-btn"), myId, myName);
-        closeSheet();
-      }}),
-      h("div", { class: "sub", text: "Sayfa kapalıyken aranmak için bildirim kanalın:" }),
-      h("div", { class: "code", text: topic }),
-      h("button", { class: "btn alt", type: "button", text: "Kanalı kopyala", onclick: () => {
-        navigator.clipboard.writeText(topic).then(() => toast("Kopyalandı")).catch(() => toast("Kopyalanamadı"));
-      }}),
-      h("a", { class: "btn alt", href: "ntfy://ntfy.sh/" + topic, text: "ntfy'de aç" }),
-      h("div", { class: "help", text: "1) ntfy uygulamasını kur. 2) Bu kanala abone ol (+ butonu, ya da yukarıdaki düğme). 3) Bildirim iznini ver, pil tasarrufundan çıkar. Biri seni arayınca bildirim gelir, dokununca site açılır." })
-    );
-  } else {
-    const u = users[id] || {};
-    const isFr = friendsList().includes(id);
-    body.append(
-      avatar(id, u.name, "lg"),
-      h("h2", { text: u.name || "Biri" }),
-      h("div", { class: "sub", text: presence(u) })
-    );
-    if(isFr){
-      body.append(
-        h("button", { class: "btn", type: "button", text: "💬 Mesaj", onclick: () => {
-          if(peerId === id) closeSheet(); else openChat(id);
-        }}),
-        h("button", { class: "btn alt", type: "button", text: "📞 Sesli ara", onclick: () => startCall(id, false) }),
-        h("button", { class: "btn alt", type: "button", text: "📹 Görüntülü ara", onclick: () => startCall(id, true) }),
-        h("button", { class: "btn bad", type: "button", text: "Arkadaşlıktan çıkar", onclick: () => removeFriend(id) })
-      );
-    } else {
-      body.append(h("button", { class: "btn", type: "button", text: "Arkadaş ekle", onclick: () => { addFriend(id); closeSheet(); } }));
-    }
-  }
-  $("sheet").hidden = false;
+// ====== Ana ekran ======
+function renderHome(){
+  const mine = (users[me] && users[me].friends) || [];
+  const fl = mine.filter(id => users[id]);
+  $('friends').innerHTML = fl.length
+    ? fl.map(id => `<div class="row" data-open="${esc(id)}"><div class="av">${esc(initial(users[id].name))}</div><div class="nm">${esc(users[id].name)}</div></div>`).join('')
+    : '<div class="empty">Henüz kimse yok. Aşağıdan ekle.</div>';
+  const others = Object.keys(users).filter(id => id !== me && !mine.includes(id));
+  $('others').innerHTML = others.length
+    ? others.map(id => `<div class="row"><div class="av">${esc(initial(users[id].name))}</div><div class="nm">${esc(users[id].name)}</div><button class="add" data-add="${esc(id)}">+ Ekle</button></div>`).join('')
+    : '<div class="empty">Eklenecek kimse yok. Arkadaşların siteye girip isim yazınca burada görünür.</div>';
 }
-
-/* ---------- sohbet ---------- */
-function refreshPeer(){
-  if(!peerId) return;
-  const u = users[peerId] || {};
-  $("peer-name").textContent = u.name || "Biri";
-  $("peer-status").textContent = presence(u);
-  applyAvatar($("peer-av"), peerId, u.name);
-}
-
-function openChat(id){
-  closeSheet();
-  if(peerId || jOpen) return;
-  peerId = id; firstRender = true; msgDocs = [];
-  $("home").classList.remove("on");
-  $("chat").classList.add("on");
-  history.pushState({ chat: id }, "");
-  refreshPeer();
-  $("msgs").textContent = "";
-  const cid = chatIdOf(myId, id);
-  setDoc(doc(db, "chats", cid), { members: [myId, id] }, { merge: true }).catch(() => {});
-  const q = query(collection(db, "chats", cid, "messages"), orderBy("createdAt", "desc"), limit(50));
-  unsubMsgs = onSnapshot(q, (snap) => {
-    msgDocs = snap.docs.map((s) => {
-      const d = s.data({ serverTimestamps: "estimate" });
-      return { ...d, id: s.id, date: d.createdAt ? d.createdAt.toDate() : null };
-    }).reverse();
-    renderMessages();
-    markRead();
-  }, (err) => { console.error(err); toast("Mesajlar yüklenemedi."); });
-  updateTyping();
-}
-
-function closeChatView(){
-  stopTyping();
-  if(unsubMsgs){ unsubMsgs(); unsubMsgs = null; }
-  peerId = null; msgDocs = [];
-  $("typing").classList.remove("on");
-  $("chat").classList.remove("on");
-  $("home").classList.add("on");
-  renderHome();
-}
-$("back").addEventListener("click", () => history.back());
-window.addEventListener("popstate", () => {
-  if(jOpen) closeJarvis();
-  else if(peerId) closeChatView();
-});
-$("peer").addEventListener("click", () => { if(peerId) openProfile(peerId); });
-
-function renderMessages(){
-  const box = $("msgs");
-  const near = box.scrollHeight - box.scrollTop - box.clientHeight < 150;
-  const stick = near || firstRender;
-  box.textContent = "";
-  if(!msgDocs.length){
-    box.append(h("div", { class: "empty", text: "Henüz mesaj yok. İlk mesajı sen yaz." }));
-    return;
-  }
-  for(const d of msgDocs){
-    const mine = d.uid === myId;
-    const bubble = h("div", { class: "bubble" + (d.deleted ? " gone" : "") });
-    if(d.deleted){
-      bubble.textContent = "🚫 Bu mesaj silindi";
-    } else if(typeof d.image === "string" && d.image.startsWith("data:image/jpeg")){
-      bubble.classList.add("photo");
-      const img = h("img", { alt: "Fotoğraf" });
-      img.src = d.image;
-      img.addEventListener("load", () => { if(stick) box.scrollTop = box.scrollHeight; });
-      img.addEventListener("click", (e) => { e.stopPropagation(); openViewer(d.image); });
-      bubble.append(img);
-    } else {
-      bubble.textContent = d.text || "";
-    }
-    const wrap = h("div", { class: "msg " + (mine ? "mine" : "theirs") }, bubble,
-      h("div", { class: "time", text: fmtTime(d.date) }));
-    if(mine && !d.deleted){
-      wrap.append(h("button", { class: "del", type: "button", text: "🗑️ Sil", onclick: (e) => { e.stopPropagation(); deleteMsg(d.id); } }));
-      bubble.addEventListener("click", () => {
-        const was = wrap.classList.contains("sel");
-        box.querySelectorAll(".msg.sel").forEach((n) => n.classList.remove("sel"));
-        if(!was) wrap.classList.add("sel");
-      });
-    }
-    box.append(wrap);
-  }
-  if(stick){ box.scrollTop = box.scrollHeight; firstRender = false; }
-}
-
-async function deleteMsg(id){
-  if(!peerId) return;
-  if(!confirm("Bu mesaj herkesten silinsin mi?")) return;
-  const cid = chatIdOf(myId, peerId);
-  try{
-    await updateDoc(doc(db, "chats", cid, "messages", id), { deleted: true, text: "", image: "" });
-    const last = msgDocs[msgDocs.length - 1];
-    if(last && last.id === id){
-      await setDoc(doc(db, "chats", cid), { lastText: "🚫 Bu mesaj silindi" }, { merge: true });
-    }
-  }catch(e){ console.error(e); toast("Silinemedi."); }
-}
-
-function markRead(){
-  if(!peerId || document.hidden) return;
-  const cid = chatIdOf(myId, peerId), c = chats[cid];
-  if(!c || !c.lastTs || c.lastFrom === myId) return;
-  if(marked[cid] === c.lastTs) return;
-  if(((c.read && c.read[myId]) || 0) >= c.lastTs) return;
-  marked[cid] = c.lastTs;
-  setDoc(doc(db, "chats", cid), { read: { [myId]: Math.max(Date.now(), c.lastTs) } }, { merge: true }).catch(() => {});
-}
-document.addEventListener("visibilitychange", () => {
-  if(!document.hidden){ saveMe(true); markRead(); }
-});
-
-async function sendMsg(payload, preview){
-  if(!peerId) return;
-  const cid = chatIdOf(myId, peerId);
-  try{
-    await addDoc(collection(db, "chats", cid, "messages"), { uid: myId, createdAt: serverTimestamp(), ...payload });
-    await setDoc(doc(db, "chats", cid), {
-      members: [myId, peerId], lastText: preview, lastTs: Date.now(), lastFrom: myId,
-      typing: { [myId]: 0 }, read: { [myId]: Date.now() }
-    }, { merge: true });
-  }catch(e){ console.error(e); toast("Gönderilemedi. Tekrar dene."); }
-}
-
-/* ---------- yazıyor... ---------- */
-function stopTyping(){
-  clearTimeout(idleT);
-  if(lastPing && peerId){
-    lastPing = 0;
-    setDoc(doc(db, "chats", chatIdOf(myId, peerId)), { typing: { [myId]: 0 } }, { merge: true }).catch(() => {});
-  }
-}
-function updateTyping(){
-  if(!peerId){ return; }
-  const c = chats[chatIdOf(myId, peerId)];
-  const t = c && c.typing && c.typing[peerId];
-  $("typing").classList.toggle("on", !!(t && Date.now() - t < 6000));
-}
-setInterval(updateTyping, 1500);
-setInterval(refreshPeer, 30000);
-
-const textEl = $("text");
-textEl.addEventListener("input", () => {
-  autosize(textEl);
-  if(!peerId) return;
-  if(!textEl.value.trim()){ stopTyping(); return; }
-  const now = Date.now();
-  if(now - lastPing > 2500){
-    lastPing = now;
-    setDoc(doc(db, "chats", chatIdOf(myId, peerId)),
-      { members: [myId, peerId], typing: { [myId]: now } }, { merge: true }).catch(() => {});
-  }
-  clearTimeout(idleT);
-  idleT = setTimeout(stopTyping, 3500);
-});
-
-$("composer").addEventListener("submit", (e) => {
-  e.preventDefault();
-  const v = textEl.value.trim();
-  if(!v) return;
-  textEl.value = "";
-  autosize(textEl);
-  stopTyping();
-  sendMsg({ text: v }, v.slice(0, 60));
-  textEl.focus();
-});
-
-/* ---------- fotoğraf ---------- */
-$("b-cam").addEventListener("click", () => $("file-cam").click());
-$("b-gal").addEventListener("click", () => $("file-gal").click());
-
-async function shrink(file){
-  let src = null, W = 0, H = 0, bmp = null;
-  try{ bmp = await createImageBitmap(file); }catch(e){ bmp = null; }
-  if(bmp){ src = bmp; W = bmp.width; H = bmp.height; }
-  else{
-    src = await new Promise((resolve, reject) => {
-      const img = new Image();
-      const u = URL.createObjectURL(file);
-      img.onload = () => { URL.revokeObjectURL(u); resolve(img); };
-      img.onerror = () => { URL.revokeObjectURL(u); reject(new Error("img")); };
-      img.src = u;
-    });
-    W = src.naturalWidth || src.width; H = src.naturalHeight || src.height;
-  }
-  const c = document.createElement("canvas");
-  const ctx = c.getContext("2d");
-  let max = 800, q = 0.65, url = "";
-  for(let i = 0; i < 5; i++){
-    const s = Math.min(1, max / Math.max(W, H));
-    c.width = Math.max(1, Math.round(W * s));
-    c.height = Math.max(1, Math.round(H * s));
-    ctx.drawImage(src, 0, 0, c.width, c.height);
-    url = c.toDataURL("image/jpeg", q);
-    if(url.length < 450000) break;
-    max = Math.round(max * 0.8);
-    q = Math.max(0.5, q - 0.05);
-  }
-  if(bmp && bmp.close) bmp.close();
-  c.width = 1; c.height = 1;
-  if(url.length > 900000) throw new Error("big");
-  return url;
-}
-
-async function handleFile(e){
-  const file = e.target.files[0];
-  e.target.value = "";
-  if(!file || !peerId) return;
-  toast("Fotoğraf hazırlanıyor…", 30000);
-  try{
-    const url = await shrink(file);
-    await sendMsg({ image: url }, "📷 Fotoğraf");
-    $("toast").hidden = true;
-  }catch(err){
-    console.error(err);
-    toast("Fotoğraf gönderilemedi. Başka bir tane dene.");
-  }
-}
-$("file-gal").addEventListener("change", handleFile);
-$("file-cam").addEventListener("change", handleFile);
-
-function openViewer(src){ $("viewer-img").src = src; $("viewer").hidden = false; }
-$("viewer").addEventListener("click", () => { $("viewer").hidden = true; });
-
-/* ---------- Jarvis ---------- */
-function saveJ(){
-  try{
-    store("ark_jhist", JSON.stringify(jHist.slice(-40).map((m) => ({ role: m.role, text: m.text, t: m.t }))));
-  }catch(e){}
-}
-
-function cleanText(t){
-  return String(t)
-    .replace(/\*\*(.+?)\*\*/g, "$1")
-    .replace(/^#{1,6}\s*/gm, "")
-    .replace(/^\s*[*-]\s+/gm, "• ")
-    .replace(/`{1,3}/g, "");
-}
-
-function stripAds(t){
-  const parts = String(t).split(/\n{2,}/);
-  while(parts.length > 1 && (/pollinations/i.test(parts[parts.length - 1]) || /^[-*_]{3,}$/.test(parts[parts.length - 1].trim()))){
-    parts.pop();
-  }
-  return parts.join("\n\n").trim();
-}
-
-function speak(text){
-  if(!("speechSynthesis" in window)) return;
-  try{
-    speechSynthesis.cancel();
-    const plain = cleanText(text).replace(/[•*_#]/g, "").replace(/\s+/g, " ").trim();
-    if(!plain) return;
-    const parts = plain.match(/[^.!?…]+[.!?…]*/g) || [plain];
-    const chunks = [];
-    let buf = "";
-    for(const p of parts){
-      if((buf + p).length > 180 && buf){ chunks.push(buf); buf = p; } else buf += p;
-    }
-    if(buf) chunks.push(buf);
-    for(const c of chunks){
-      const u = new SpeechSynthesisUtterance(c.trim());
-      u.lang = "tr-TR"; u.rate = 1.02;
-      speechSynthesis.speak(u);
-    }
-  }catch(e){}
-}
-
-function jSystem(){
-  return "Sen Jarvis'sin: Arkadaş adlı mesajlaşma uygulamasının içindeki kişisel yapay zekâ asistanısın. Kullanıcının adı " +
-    (myName || "arkadaş") + ". Varsayılan olarak Türkçe konuş (kullanıcı başka dilde yazarsa o dilde cevap ver). " +
-    "Samimi, net ve kısa ol; cevaplar telefon ekranında okunuyor, gereksiz uzatma. Sesli okunabilmesi için markdown, tablo ve emoji kullanımını en aza indir. " +
-    "Bilmediğin şeyi uydurma. Şu anki tarih ve saat: " +
-    new Date().toLocaleString("tr-TR", { dateStyle: "full", timeStyle: "short" }) + ".";
-}
-
-/* Gemini (anahtar girilmişse) */
-function buildContents(){
-  const arr = [];
-  const slice = jHist.slice(-24);
-  const lastMsg = jHist[jHist.length - 1];
-  for(const m of slice){
-    const role = m.role === "user" ? "user" : "model";
-    const parts = [{ text: (m.prompt || m.text) || "." }];
-    if(m.img && m === lastMsg){
-      parts.push({ inlineData: { mimeType: "image/jpeg", data: m.img.split(",")[1] } });
-    }
-    const prev = arr[arr.length - 1];
-    if(prev && prev.role === role) prev.parts.push(...parts);
-    else arr.push({ role, parts });
-  }
-  while(arr.length && arr[0].role !== "user") arr.shift();
-  return arr;
-}
-
-async function askGemini(){
-  const key = store("ark_jkey");
-  const list = [];
-  const custom = store("ark_jmodel");
-  if(custom) list.push(custom);
-  if(jModelG) list.push(jModelG);
-  ["gemini-2.5-flash", "gemini-3.5-flash", "gemini-2.5-flash-lite"].forEach((m) => list.push(m));
-  const models = [...new Set(list)];
-  let lastStatus = 0, lastMsg = "";
-  for(const m of models){
-    const url = "https://generativelanguage.googleapis.com/v1beta/models/" + encodeURIComponent(m) +
-      ":generateContent?key=" + encodeURIComponent(key);
-    let res = null, noThink = false;
-    for(let attempt = 0; attempt < 2; attempt++){
-      const body = { systemInstruction: { parts: [{ text: jSystem() }] }, contents: buildContents() };
-      if(!noThink) body.generationConfig = { thinkingConfig: { thinkingBudget: 0 } };
-      const ctl = new AbortController();
-      const tm = setTimeout(() => ctl.abort(), 30000);
-      try{
-        res = await fetch(url, {
-          method: "POST", headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(body), signal: ctl.signal
-        });
-      }catch(e){
-        clearTimeout(tm);
-        throw new Error(e && e.name === "AbortError" ? "TIMEOUT" : "NET");
-      }
-      clearTimeout(tm);
-      if(res.status === 400 && !noThink){
-        let t = "";
-        try{ t = await res.clone().text(); }catch(e){}
-        if(/think/i.test(t)){ noThink = true; continue; }
-      }
-      break;
-    }
-    if(res.ok){
-      const data = await res.json();
-      const parts = (data.candidates && data.candidates[0] && data.candidates[0].content && data.candidates[0].content.parts) || [];
-      const txt = parts.filter((p) => p.text && !p.thought).map((p) => p.text).join("").trim();
-      if(txt){ jModelG = m; return txt; }
-      const br = data.promptFeedback && data.promptFeedback.blockReason;
-      throw new Error(br ? "BLOCK" : "EMPTY");
-    }
-    lastStatus = res.status;
-    lastMsg = "";
-    try{ const j = await res.json(); lastMsg = (j.error && j.error.message) || ""; }catch(e){}
-    if(res.status === 400 || res.status === 401 || res.status === 403) break;
-  }
-  const err = new Error("HTTP");
-  err.status = lastStatus; err.detail = lastMsg;
-  throw err;
-}
-
-/* Ücretsiz, anahtarsız servis (Pollinations) */
-function buildMessages(){
-  const arr = [{ role: "system", content: jSystem() }];
-  const lastMsg = jHist[jHist.length - 1];
-  for(const m of jHist.slice(-20)){
-    const role = m.role === "user" ? "user" : "assistant";
-    const txt = (m.prompt || m.text) || ".";
-    let content = txt;
-    if(m.img && m === lastMsg){
-      content = [{ type: "text", text: txt }, { type: "image_url", image_url: { url: m.img } }];
-    }
-    const prev = arr[arr.length - 1];
-    if(prev && prev.role === role && typeof prev.content === "string" && typeof content === "string"){
-      prev.content += "\n" + content;
-    } else {
-      arr.push({ role, content });
-    }
-  }
-  while(arr.length > 1 && arr[1].role !== "user") arr.splice(1, 1);
-  return arr;
-}
-
-async function askFree(){
-  const list = [];
-  const custom = store("ark_jmodel");
-  if(custom) list.push(custom);
-  if(jModelF) list.push(jModelF);
-  ["openai", "openai-fast", "mistral"].forEach((m) => list.push(m));
-  const models = [...new Set(list)];
-  let lastStatus = 0, lastMsg = "";
-  for(const m of models){
-    let res;
-    const ctl = new AbortController();
-    const tm = setTimeout(() => ctl.abort(), 30000);
+$('home').addEventListener('click', async e => {
+  const add = e.target.closest('[data-add]');
+  if(add){
+    const id = add.dataset.add;
     try{
-      res = await fetch("https://text.pollinations.ai/openai?referrer=arasbezir.github.io", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ model: m, messages: buildMessages() }),
-        signal: ctl.signal
-      });
-    }catch(e){
-      clearTimeout(tm);
-      throw new Error(e && e.name === "AbortError" ? "TIMEOUT" : "NET");
-    }
-    clearTimeout(tm);
-    const raw = await res.text();
-    if(res.ok){
-      let txt = "";
-      try{
-        const j = JSON.parse(raw);
-        txt = (j.choices && j.choices[0] && j.choices[0].message && j.choices[0].message.content) || "";
-      }catch(e){ txt = raw; }
-      txt = stripAds(String(txt).trim());
-      if(txt){ jModelF = m; return txt; }
-      throw new Error("EMPTY");
-    }
-    lastStatus = res.status;
-    lastMsg = raw.slice(0, 200);
-    if(res.status === 401 || res.status === 402 || res.status === 403) break;
-  }
-  const err = new Error("HTTP");
-  err.status = lastStatus; err.detail = lastMsg; err.free = true;
-  throw err;
-}
-
-async function askAI(){
-  if(store("ark_jkey")){
-    try{ return await askGemini(); }
-    catch(e){
-      if(e.status === 429 || e.message === "NET"){
-        try{ return await askFree(); }catch(e2){ throw e; }
-      }
-      throw e;
-    }
-  }
-  return askFree();
-}
-
-function jErrText(e){
-  if(e.message === "NET") return "İnternet bağlantısı yok ya da servise ulaşılamadı.";
-  if(e.message === "TIMEOUT") return "Jarvis çok geç cevap verdi. Tekrar dene.";
-  if(e.message === "BLOCK") return "Bu isteğe cevap veremedim (güvenlik filtresi).";
-  if(e.message === "EMPTY") return "Boş cevap geldi, tekrar dene.";
-  const s = e.status;
-  if(e.free){
-    if(s === 401 || s === 402 || s === 403) return "Ücretsiz servis anahtar istiyor. Gemini anahtarı girersen çalışır.";
-    if(s === 429) return "Ücretsiz servis yoğun, biraz bekleyip tekrar dene.";
-    return "Ücretsiz servis cevap vermedi (" + (s || "?") + "). Biraz sonra dene ya da ⚙️'dan Gemini anahtarı gir.";
-  }
-  if(s === 400 && /api key/i.test(e.detail || "")) return "Anahtar geçersiz. ⚙️'dan doğru anahtarı gir ya da sil.";
-  if(s === 400) return "İstek reddedildi: " + String(e.detail || "").slice(0, 120);
-  if(s === 401 || s === 403) return "Anahtar çalışmıyor ya da izin yok. ⚙️'dan yeni anahtar dene ya da sil.";
-  if(s === 404) return "Model bulunamadı. ⚙️'dan model adını değiştirmeyi dene.";
-  if(s === 429) return "Ücretsiz limit doldu. Biraz bekleyip tekrar dene.";
-  return "Jarvis şu an cevap veremiyor (" + (s || "?") + "). Sonra tekrar dene.";
-}
-
-function jThinking(on){
-  $("jtyping").classList.toggle("on", on);
-  $("j-status").textContent = on ? "düşünüyor…" : "hazır";
-}
-
-function renderJ(){
-  const box = $("jmsgs");
-  const near = box.scrollHeight - box.scrollTop - box.clientHeight < 150;
-  box.textContent = "";
-  if(!jHist.length){
-    box.append(h("div", { class: "empty", text: "Jarvis'e bir şey sor." }));
+      await db.collection('v2users').doc(me).set({friends: FV.arrayUnion(id)}, {merge:true});
+      await db.collection('v2users').doc(id).set({friends: FV.arrayUnion(me)}, {merge:true});
+    }catch(err){ toast('Eklenemedi'); }
     return;
   }
-  for(const m of jHist){
-    const mine = m.role === "user";
-    const bubble = h("div", { class: "bubble" });
-    if(m.img){
-      bubble.classList.add("photo");
-      const img = h("img", { alt: "Fotoğraf" });
-      img.src = m.img;
-      img.addEventListener("click", () => openViewer(m.img));
-      bubble.append(img);
-      if(m.text && m.text !== "📷 Fotoğraf"){
-        bubble.append(h("div", { style: "padding:6px 8px 2px", text: m.text }));
-      }
-    } else {
-      bubble.textContent = mine ? m.text : cleanText(m.text);
-    }
-    if(!mine) bubble.addEventListener("click", () => speak(m.text));
-    box.append(h("div", { class: "msg " + (mine ? "mine" : "theirs") }, bubble,
-      h("div", { class: "time", text: fmtTime(m.t) })));
-  }
-  if(near || jFirst){ box.scrollTop = box.scrollHeight; jFirst = false; }
-}
+  const open = e.target.closest('[data-open]');
+  if(open) openChat(open.dataset.open);
+});
 
-async function jSend(text, img){
-  text = (text || "").trim();
-  if(!text && !img) return;
-  if(jBusy){ toast("Jarvis düşünüyor…"); return; }
-  jBusy = true;
-  try{ speechSynthesis.cancel(); }catch(e){}
-  const userMsg = {
-    role: "user", text: text || "📷 Fotoğraf",
-    prompt: img ? (text || "Bu fotoğrafı kısaca anlat.") : undefined,
-    img: img || null, t: Date.now()
-  };
-  jHist.push(userMsg);
-  renderJ(); saveJ(); jFirst = true;
-  jThinking(true);
+// ====== Sohbet ======
+function openChat(fid){
+  chatFriend = fid;
+  cid = [me, fid].sort().join('__');
+  const nm = (users[fid] && users[fid].name) || fid;
+  $('chatTitle').textContent = nm;
+  $('chatAv').textContent = initial(nm);
+  $('chatSub').textContent = '';
+  $('msgs').innerHTML = '';
+  firstRender = true; typingTs = 0;
+  show('chat');
+  const chatRef = db.collection('v2chats').doc(cid);
+  unsubMsgs = chatRef.collection('messages').orderBy('t').limitToLast(150).onSnapshot(renderMsgs, err => toast('Mesajlar yüklenemedi'));
+  unsubChat = chatRef.onSnapshot(d => {
+    const t = d.data() && d.data().typing;
+    typingTs = (t && t[fid]) || 0;
+    updateTyping();
+  });
+}
+$('backBtn').onclick = () => {
+  if(unsubMsgs) unsubMsgs(); if(unsubChat) unsubChat();
+  unsubMsgs = unsubChat = null; chatFriend = null; cid = null;
+  show('home');
+};
+
+function renderMsgs(snap){
+  const box = $('msgs');
+  const nearBottom = box.scrollHeight - box.scrollTop - box.clientHeight < 120;
+  let html = '';
+  snap.forEach(d => {
+    const m = d.data();
+    const mine = m.from === me;
+    html += `<div class="m ${mine?'me':''}" data-id="${d.id}" data-mine="${mine?1:0}">`
+      + (m.img ? `<img src="${m.img}" data-view="1" alt="foto">` : '')
+      + (m.text ? esc(m.text) : '')
+      + `<time>${fmtTime(m.t)}</time></div>`;
+  });
+  box.innerHTML = html;
+  if(firstRender || nearBottom){ box.scrollTop = box.scrollHeight; firstRender = false; }
+}
+$('msgs').addEventListener('click', async e => {
+  const img = e.target.closest('[data-view]');
+  if(img){ $('viewerImg').src = img.src; $('viewer').classList.remove('hidden'); return; }
+  const m = e.target.closest('.m');
+  if(m && m.dataset.mine === '1'){
+    if(confirm('Bu mesaj silinsin mi?')){
+      db.collection('v2chats').doc(cid).collection('messages').doc(m.dataset.id).delete().catch(()=>toast('Silinemedi'));
+    }
+  }
+});
+$('viewer').onclick = () => $('viewer').classList.add('hidden');
+
+function updateTyping(){
+  const on = chatFriend && (Date.now() - typingTs < 4000);
+  $('typingBar').classList.toggle('hidden', !on);
+  $('chatSub').textContent = on ? 'yazıyor…' : '';
+  if(on){ const box = $('msgs'); box.scrollTop = box.scrollHeight; }
+}
+setInterval(updateTyping, 1000);
+
+function setTyping(v){
+  if(!cid) return;
+  db.collection('v2chats').doc(cid).set({typing: {[me]: v}}, {merge:true}).catch(()=>{});
+}
+$('msgIn').addEventListener('input', () => {
+  const now = Date.now();
+  if(now - lastTypingSent > 2000){ lastTypingSent = now; setTyping(now); }
+});
+
+async function pushMsg(msg, preview){
   try{
-    const reply = await askAI();
-    jHist.push({ role: "model", text: reply, t: Date.now() });
-    saveJ(); renderJ(); jFirst = true;
-    if(jSpeakNext || store("ark_jvoice") === "1") speak(reply);
+    await db.collection('v2chats').doc(cid).collection('messages').add(msg);
+    setTyping(0); lastTypingSent = 0;
+    notify(chatFriend, meName, preview, 3);
   }catch(e){
-    console.error(e);
-    toast(jErrText(e), 7000);
-    if(e.free && (e.status === 401 || e.status === 402 || e.status === 403) && !store("ark_jkey")) openJarvisSettings();
+    toast('Gönderilemedi: ' + (e.message||e));
   }
-  jSpeakNext = false; jBusy = false;
-  jThinking(false);
 }
-
-function syncVoiceBtn(){ $("j-voice").textContent = store("ark_jvoice") === "1" ? "🔊" : "🔇"; }
-
-function openJarvis(){
-  if(peerId || jOpen) return;
-  jOpen = true; jFirst = true;
-  $("home").classList.remove("on");
-  $("jarvis").classList.add("on");
-  history.pushState({ jarvis: 1 }, "");
-  syncVoiceBtn();
-  if(!jHist.length){
-    jHist.push({
-      role: "model", t: Date.now(),
-      text: "Merhaba " + (myName || "") + "! Ben Jarvis. Bana yazabilir ya da 🎤'ya basıp konuşabilirsin, 📎 ile fotoğraf da gönderebilirsin. Ne yapalım?"
-    });
-    saveJ();
-  }
-  renderJ();
+function sendText(){
+  const text = $('msgIn').value.trim();
+  if(!text) return;
+  $('msgIn').value = '';
+  pushMsg({from: me, t: Date.now(), text}, text);
 }
-function closeJarvis(){
-  try{ speechSynthesis.cancel(); }catch(e){}
-  try{ if(recog && listening) recog.stop(); }catch(e){}
-  jOpen = false;
-  $("jarvis").classList.remove("on");
-  $("home").classList.add("on");
-  renderHome();
-}
-$("j-back").addEventListener("click", () => history.back());
+$('sendBtn').onclick = sendText;
+$('msgIn').addEventListener('keydown', e => { if(e.key==='Enter') sendText(); });
 
-function openJarvisSettings(){
-  const body = $("sheet-body");
-  body.textContent = "";
-  const av = h("div", { class: "avatar lg", text: "🤖" });
-  av.style.background = "linear-gradient(135deg,#1f7a5a,#2b6cb0)";
-  const keyIn = h("input", {
-    type: "password", autocomplete: "off", "aria-label": "Gemini anahtarı",
-    placeholder: store("ark_jkey") ? "Anahtar kayıtlı (değiştirmek için yenisini yapıştır)" : "Gemini API anahtarını yapıştır"
+// ====== Foto ======
+function compress(file){
+  return new Promise((res, rej) => {
+    const url = URL.createObjectURL(file);
+    const img = new Image();
+    img.onload = () => {
+      const max = 900;
+      const k = Math.min(1, max / Math.max(img.width, img.height));
+      const w = Math.round(img.width * k), h = Math.round(img.height * k);
+      const c = document.createElement('canvas'); c.width = w; c.height = h;
+      c.getContext('2d').drawImage(img, 0, 0, w, h);
+      URL.revokeObjectURL(url);
+      let q = 0.6, out = c.toDataURL('image/jpeg', q);
+      while(out.length > 700000 && q > 0.2){ q -= 0.1; out = c.toDataURL('image/jpeg', q); }
+      res(out);
+    };
+    img.onerror = () => { URL.revokeObjectURL(url); rej(new Error('Foto açılamadı')); };
+    img.src = url;
   });
-  const modelIn = h("input", { "aria-label": "Model adı", placeholder: "Model adı (boş bırak)" });
-  modelIn.value = store("ark_jmodel") || "";
-  body.append(
-    av,
-    h("h2", { text: "Jarvis ayarları" }),
-    h("div", { class: "help", text: "Jarvis'in düzgün çalışması için ücretsiz bir Gemini anahtarı gerekir: aistudio.google.com/apikey adresinde “Create API key” de, çıkan anahtarı aşağıya yapıştır. Anahtar sadece bu telefonda saklanır, sitenin koduna girmez. " + (store("ark_jkey") ? "Şu an anahtarın kayıtlı." : "Şu an anahtar kayıtlı değil, ücretsiz yedek servis denenir ve çoğu zaman çalışmaz.") }),
-    h("a", { class: "btn alt", href: "https://aistudio.google.com/apikey", target: "_blank", rel: "noopener", text: "Gemini anahtarı al" }),
-    keyIn,
-    modelIn,
-    h("button", { class: "btn", type: "button", text: "Kaydet", onclick: () => {
-      const k = keyIn.value.trim();
-      if(k) store("ark_jkey", k);
-      store("ark_jmodel", modelIn.value.trim());
-      jModelG = null; jModelF = null;
-      closeSheet();
-      toast("Kaydedildi");
-    }}),
-    h("button", { class: "btn bad", type: "button", text: "Sohbeti temizle", onclick: () => {
-      if(!confirm("Jarvis sohbeti silinsin mi?")) return;
-      jHist = []; saveJ(); renderJ(); closeSheet();
-    }}),
-    h("button", { class: "btn bad", type: "button", text: "Anahtarı sil", onclick: () => {
-      store("ark_jkey", ""); closeSheet(); toast("Anahtar silindi");
-    }})
-  );
-  $("sheet").hidden = false;
 }
-$("j-set").addEventListener("click", openJarvisSettings);
-
-$("j-voice").addEventListener("click", () => {
-  const on = store("ark_jvoice") === "1";
-  store("ark_jvoice", on ? "0" : "1");
-  try{ speechSynthesis.cancel(); }catch(e){}
-  syncVoiceBtn();
-  toast(on ? "Sesli cevap kapalı" : "Sesli cevap açık");
-});
-
-const jtextEl = $("jtext");
-jtextEl.addEventListener("input", () => autosize(jtextEl));
-$("jcomposer").addEventListener("submit", (e) => {
-  e.preventDefault();
-  const v = jtextEl.value;
-  jtextEl.value = "";
-  autosize(jtextEl);
-  jSend(v, null);
-  jtextEl.focus();
-});
-
-$("j-att").addEventListener("click", () => $("jfile").click());
-$("jfile").addEventListener("change", async (e) => {
-  const f = e.target.files[0];
-  e.target.value = "";
+async function handleFile(input){
+  const f = input.files && input.files[0];
+  input.value = '';
   if(!f) return;
-  toast("Fotoğraf hazırlanıyor…", 15000);
   try{
-    const url = await shrink(f);
-    const v = jtextEl.value;
-    jtextEl.value = "";
-    autosize(jtextEl);
-    $("toast").hidden = true;
-    jSend(v, url);
-  }catch(err){
-    console.error(err);
-    toast("Fotoğraf okunamadı.");
-  }
-});
+    toast('Foto hazırlanıyor…');
+    const data = await compress(f);
+    await pushMsg({from: me, t: Date.now(), img: data}, '📷 Fotoğraf');
+  }catch(e){ toast(e.message || 'Foto gönderilemedi'); }
+}
+$('camBtn').onclick = () => $('camFile').click();
+$('galBtn').onclick = () => $('galFile').click();
+$('camFile').onchange = e => handleFile(e.target);
+$('galFile').onchange = e => handleFile(e.target);
 
-let recog = null, listening = false;
-$("j-mic").addEventListener("click", () => {
-  if(listening){ try{ recog.stop(); }catch(e){} return; }
-  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-  if(!SR){ toast("Bu tarayıcı sesli yazmayı desteklemiyor. Klavyedeki mikrofonu kullan."); return; }
-  try{ speechSynthesis.cancel(); }catch(e){}
-  recog = new SR();
-  recog.lang = "tr-TR";
-  recog.interimResults = true;
-  recog.continuous = false;
-  let finalText = "";
-  recog.onstart = () => {
-    listening = true;
-    $("j-mic").classList.add("rec");
-    jtextEl.placeholder = "Dinliyorum…";
-  };
-  recog.onresult = (e) => {
-    let t = "";
-    for(let i = 0; i < e.results.length; i++) t += e.results[i][0].transcript;
-    finalText = t;
-    jtextEl.value = t;
-    autosize(jtextEl);
-  };
-  recog.onerror = (e) => {
-    if(e.error === "not-allowed" || e.error === "service-not-allowed") toast("Mikrofon izni ver.");
-    else if(e.error !== "no-speech" && e.error !== "aborted") toast("Ses algılanamadı: " + e.error);
-  };
-  recog.onend = () => {
-    listening = false;
-    $("j-mic").classList.remove("rec");
-    jtextEl.placeholder = "Jarvis'e yaz…";
-    const t = finalText.trim();
-    if(t){
-      jtextEl.value = "";
-      autosize(jtextEl);
-      jSpeakNext = true;
-      jSend(t, null);
-    }
-  };
-  try{ recog.start(); }catch(e){ listening = false; }
-});
-
-/* ---------- arama (WebRTC + Firestore) ---------- */
-const RTC_CONFIG = { iceServers: [
-  { urls: "stun:stun.l.google.com:19302" },
-  { urls: "stun:stun1.l.google.com:19302" }
+// ====== Arama (WebRTC) ======
+const ICE = {iceServers:[
+  {urls:'stun:stun.l.google.com:19302'},
+  {urls:'stun:stun1.l.google.com:19302'},
+  {urls:['turn:openrelay.metered.ca:80','turn:openrelay.metered.ca:443'], username:'openrelayproject', credential:'openrelayproject'}
 ]};
-let pc = null, localStream = null, callRef = null, callRole = null, callVideo = false;
-let callUnsubs = [], pendingCand = [], callTimerI = null, callStart = 0, callTimeout = null;
-let answerSet = false, wakeLock = null;
-let ringCtx = null, ringI = null;
+let call = null, incoming = null;
 
-function startRing(){
-  stopRing();
-  try{
-    const AC = window.AudioContext || window.webkitAudioContext;
-    ringCtx = new AC();
-    if(ringCtx.state === "suspended") ringCtx.resume();
-    const pattern = () => {
-      if(!ringCtx) return;
-      const t0 = ringCtx.currentTime;
-      [0, 0.45].forEach((off, i) => {
-        const o = ringCtx.createOscillator(), g = ringCtx.createGain();
-        o.type = "square"; o.frequency.value = i ? 660 : 880;
-        g.gain.setValueAtTime(0.9, t0 + off);
-        g.gain.setValueAtTime(0, t0 + off + 0.35);
-        o.connect(g); g.connect(ringCtx.destination);
-        o.start(t0 + off); o.stop(t0 + off + 0.4);
-      });
-      if(navigator.vibrate) navigator.vibrate([400, 150, 400]);
-    };
-    pattern();
-    ringI = setInterval(pattern, 2200);
-  }catch(e){}
+function getMedia(video){
+  return navigator.mediaDevices.getUserMedia({audio:true, video: video ? {facingMode:'user'} : false});
 }
-function stopRing(){
-  clearInterval(ringI); ringI = null;
-  try{ if(ringCtx) ringCtx.close(); }catch(e){}
-  ringCtx = null;
-  try{ if(navigator.vibrate) navigator.vibrate(0); }catch(e){}
+function setCallStatus(t){ $('callStatus').textContent = t; }
+function showCallUI(name, type){
+  $('callName').textContent = name;
+  $('callAv').textContent = initial(name);
+  const video = type === 'video';
+  $('localV').classList.toggle('hidden', !video);
+  $('callInfo').classList.toggle('hidden', video);
+  $('remoteV').style.opacity = video ? 1 : 0;
+  $('muteBtn').classList.remove('off'); $('muteBtn').textContent = '🎤';
+  $('callUI').classList.remove('hidden');
 }
-
-function setCallUI(state, buttons){
-  $("c-state").textContent = state;
-  const a = $("c-actions");
-  a.textContent = "";
-  for(const b of buttons){
-    a.append(h("button", { type: "button", class: "cbtn " + (b.cls || ""), onclick: b.fn, "aria-label": b.label },
-      h("span", { class: "ci", text: b.icon }),
-      h("span", { text: b.label })));
-  }
-}
-function openCallUI(id, video, fallbackName){
-  const u = users[id] || {};
-  const nm = u.name || fallbackName || "Biri";
-  $("c-name").textContent = nm;
-  applyAvatar($("c-av"), id, nm);
-  $("call").classList.toggle("video", !!video);
-  $("call").classList.remove("connected");
-  $("call").hidden = false;
-}
-
-function cleanupCall(){
-  callUnsubs.forEach((u) => { try{ u(); }catch(e){} });
-  callUnsubs = []; pendingCand = [];
-  clearInterval(callTimerI); clearTimeout(callTimeout);
-  callTimerI = null; callStart = 0; answerSet = false;
-  stopRing();
-  if(pc){ try{ pc.close(); }catch(e){} pc = null; }
-  if(localStream){ localStream.getTracks().forEach((t) => t.stop()); localStream = null; }
-  $("rv").srcObject = null; $("lv").srcObject = null;
-  callRef = null; callRole = null;
-  $("call").hidden = true;
-  $("call").classList.remove("video", "connected");
-  try{ if(wakeLock) wakeLock.release(); }catch(e){}
-  wakeLock = null;
-}
-async function hangup(){
-  const r = callRef;
-  cleanupCall();
-  if(r){ try{ await updateDoc(r, { status: "ended" }); }catch(e){} }
-}
-
-function toggleMute(e){
-  const t = localStream && localStream.getAudioTracks()[0];
-  if(!t) return;
-  t.enabled = !t.enabled;
-  e.currentTarget.classList.toggle("off", !t.enabled);
-}
-function toggleCam(e){
-  const t = localStream && localStream.getVideoTracks()[0];
-  if(!t) return;
-  t.enabled = !t.enabled;
-  e.currentTarget.classList.toggle("off", !t.enabled);
-}
-function callButtons(){
-  const arr = [{ icon: "🎤", label: "Sessiz", fn: toggleMute }];
-  if(callVideo) arr.push({ icon: "📷", label: "Kamera", fn: toggleCam });
-  arr.push({ icon: "📵", label: "Kapat", cls: "danger", fn: hangup });
-  return arr;
-}
-function onConnected(){
-  if(callStart) return;
-  callStart = Date.now();
-  $("call").classList.add("connected");
-  setCallUI("00:00", callButtons());
-  callTimerI = setInterval(() => {
-    const s = Math.floor((Date.now() - callStart) / 1000);
-    $("c-state").textContent = String(Math.floor(s / 60)).padStart(2, "0") + ":" + String(s % 60).padStart(2, "0");
-  }, 1000);
-}
-
-async function setupPc(video){
-  localStream = await navigator.mediaDevices.getUserMedia({
-    audio: true, video: video ? { facingMode: "user" } : false
-  });
-  pc = new RTCPeerConnection(RTC_CONFIG);
-  localStream.getTracks().forEach((t) => pc.addTrack(t, localStream));
-  $("lv").srcObject = localStream;
-  pc.ontrack = (e) => { $("rv").srcObject = e.streams[0]; };
-  pc.onconnectionstatechange = () => {
-    if(!pc) return;
-    if(pc.connectionState === "connected") onConnected();
-    if(pc.connectionState === "failed"){
-      toast("Bağlanılamadı. İkiniz de aynı wifi'da deneyin.");
-      hangup();
+function makePc(stream, isCaller, ref){
+  const pc = new RTCPeerConnection(ICE);
+  stream.getTracks().forEach(t => pc.addTrack(t, stream));
+  pc.ontrack = e => {
+    $('remoteV').srcObject = e.streams[0];
+    $('remoteV').play().catch(()=>{});
+  };
+  pc.onicecandidate = e => {
+    if(e.candidate){
+      ref.set({[isCaller ? 'callerCands' : 'calleeCands']: FV.arrayUnion(JSON.stringify(e.candidate.toJSON()))}, {merge:true}).catch(()=>{});
     }
   };
-  try{ wakeLock = await navigator.wakeLock.request("screen"); }catch(e){}
+  pc.onconnectionstatechange = () => {
+    if(!call) return;
+    if(pc.connectionState === 'connected'){
+      call.connected = true; setCallStatus('Bağlandı');
+      const t0 = Date.now();
+      clearInterval(call.tick);
+      call.tick = setInterval(() => {
+        const s = Math.floor((Date.now()-t0)/1000);
+        setCallStatus(String(Math.floor(s/60)).padStart(2,'0') + ':' + String(s%60).padStart(2,'0'));
+      }, 1000);
+    }
+    if(pc.connectionState === 'failed'){
+      setCallStatus('Bağlantı kurulamadı');
+      setTimeout(() => endCall(true), 1500);
+    }
+  };
+  return pc;
 }
-
-async function flushCand(){
-  if(!pc || !pc.remoteDescription) return;
-  while(pendingCand.length){
-    const c = pendingCand.shift();
-    try{ await pc.addIceCandidate(c); }catch(e){ console.error(e); }
-  }
-}
-function listenCand(coll){
-  callUnsubs.push(onSnapshot(collection(db, "calls", callRef.id, coll), (snap) => {
-    snap.docChanges().forEach((ch) => { if(ch.type === "added") pendingCand.push(ch.doc.data()); });
-    flushCand();
-  }));
-}
-
-function notifyCallee(id){
-  try{
-    const qs = new URLSearchParams({
-      title: "Arkadas", priority: "urgent", tags: "telephone_receiver",
-      click: location.href.split("#")[0].split("?")[0]
-    });
-    fetch("https://ntfy.sh/" + topicOf(id) + "?" + qs.toString(), {
-      method: "POST",
-      body: myName + (callVideo ? " görüntülü arıyor 📹" : " arıyor 📞")
-    }).catch(() => {});
-  }catch(e){}
-}
-
-async function startCall(friendId, video){
-  if(pc || callRole) return;
-  closeSheet();
-  callVideo = !!video; callRole = "caller";
-  openCallUI(friendId, callVideo);
-  setCallUI("Hazırlanıyor…", [{ icon: "📵", label: "İptal", cls: "danger", fn: hangup }]);
-  try{
-    await setupPc(callVideo);
-    callRef = await addDoc(collection(db, "calls"), {
-      callerId: myId, callerName: myName, calleeId: friendId,
-      video: callVideo, status: "preparing", ts: Date.now()
-    });
-    const myRef = callRef;
-    pc.onicecandidate = (e) => {
-      if(e.candidate && callRef){
-        addDoc(collection(db, "calls", callRef.id, "callerCandidates"), e.candidate.toJSON()).catch(() => {});
-      }
-    };
-    const offer = await pc.createOffer();
-    await pc.setLocalDescription(offer);
-    await updateDoc(callRef, { offer: { type: offer.type, sdp: offer.sdp }, status: "ringing", ts: Date.now() });
-    setCallUI("Aranıyor…", [{ icon: "📵", label: "İptal", cls: "danger", fn: hangup }]);
-    callUnsubs.push(onSnapshot(callRef, async (s) => {
-      const d = s.data();
-      if(!d || !pc) return;
-      if(d.answer && !answerSet){
-        answerSet = true;
-        try{ await pc.setRemoteDescription(d.answer); }catch(e){ console.error(e); }
-        flushCand();
-      }
-      if(d.status === "ended") cleanupCall();
-    }));
-    listenCand("calleeCandidates");
-    notifyCallee(friendId);
-    callTimeout = setTimeout(() => {
-      if(callRef === myRef && callRole === "caller" && !callStart){
-        toast("Açan olmadı.");
-        hangup();
-      }
-    }, 45000);
-  }catch(err){
-    console.error(err);
-    toast("Arama başlatılamadı. Mikrofon/kamera iznini kontrol et.");
-    await hangup();
+function applyCands(data){
+  if(!call || !call.pc.remoteDescription) return;
+  const arr = data[call.role === 'caller' ? 'calleeCands' : 'callerCands'] || [];
+  for(; call.idx < arr.length; call.idx++){
+    call.pc.addIceCandidate(JSON.parse(arr[call.idx])).catch(()=>{});
   }
 }
 
-async function answerCall(id, d){
-  stopRing();
-  callVideo = !!d.video;
-  setCallUI("Bağlanıyor…", [{ icon: "📵", label: "Kapat", cls: "danger", fn: hangup }]);
+async function startCall(type){
+  if(call || !chatFriend) return;
+  if(!navigator.mediaDevices){ toast('Bu tarayıcı arama desteklemiyor'); return; }
+  let stream;
+  try{ stream = await getMedia(type === 'video'); }
+  catch(e){ toast('Mikrofon / kamera izni gerekli'); return; }
+  const friend = chatFriend;
+  const fname = (users[friend] && users[friend].name) || friend;
+  const ref = db.collection('v2calls').doc(cid + '_' + Date.now());
+  call = {role:'caller', ref, stream, idx:0, type, friend};
+  call.pc = makePc(stream, true, ref);
+  $('localV').srcObject = stream;
+  showCallUI(fname, type); setCallStatus('Aranıyor…');
   try{
-    await setupPc(callVideo);
-    pc.onicecandidate = (e) => {
-      if(e.candidate && callRef){
-        addDoc(collection(db, "calls", callRef.id, "calleeCandidates"), e.candidate.toJSON()).catch(() => {});
-      }
-    };
-    listenCand("callerCandidates");
-    await pc.setRemoteDescription(d.offer);
-    flushCand();
-    const ans = await pc.createAnswer();
-    await pc.setLocalDescription(ans);
-    await updateDoc(callRef, { answer: { type: ans.type, sdp: ans.sdp }, status: "active" });
-  }catch(err){
-    console.error(err);
-    toast("Cevaplanamadı. Mikrofon/kamera iznini kontrol et.");
-    await hangup();
-  }
-}
-
-function incoming(id, d){
-  callRef = doc(db, "calls", id);
-  callRole = "callee"; callVideo = !!d.video;
-  openCallUI(d.callerId, callVideo, d.callerName);
-  setCallUI(callVideo ? "Görüntülü arama…" : "Sesli arama…", [
-    { icon: "✅", label: "Cevapla", cls: "ok", fn: () => answerCall(id, d) },
-    { icon: "📵", label: "Reddet", cls: "danger", fn: hangup }
-  ]);
-  startRing();
-  callUnsubs.push(onSnapshot(callRef, (s) => {
-    const x = s.data();
-    if(!x) return;
-    if(x.status === "ended") cleanupCall();
-    if(x.status === "active" && !pc) cleanupCall();
-  }));
-}
-
-$("acall").addEventListener("click", () => { if(peerId) startCall(peerId, false); });
-$("vcall").addEventListener("click", () => { if(peerId) startCall(peerId, true); });
-
-onSnapshot(query(collection(db, "calls"), where("calleeId", "==", myId), where("status", "==", "ringing")), (snap) => {
-  snap.docChanges().forEach((ch) => {
-    if(ch.type !== "added") return;
-    const d = ch.doc.data();
-    if(Date.now() - d.ts > 60000) return;
-    if(pc || callRole) return;
-    incoming(ch.doc.id, d);
+    const offer = await call.pc.createOffer();
+    await call.pc.setLocalDescription(offer);
+    await ref.set({from: me, fromName: meName, to: friend, type, status:'ringing',
+      offer:{type: offer.type, sdp: offer.sdp}, t: Date.now()}, {merge:true});
+  }catch(e){ toast('Arama başlatılamadı'); endCall(false); return; }
+  notify(friend, '📞 ' + meName + (type === 'video' ? ' görüntülü arıyor' : ' arıyor'), 'Açmak için dokun', 5);
+  call.unsub = ref.onSnapshot(async d => {
+    const data = d.data();
+    if(!data || !call) return;
+    if(data.answer && !call.gotAnswer){
+      call.gotAnswer = true;
+      try{ await call.pc.setRemoteDescription(data.answer); setCallStatus('Bağlanıyor…'); }catch(e){}
+    }
+    applyCands(data);
+    if(data.status === 'declined'){ toast('Aramayı reddetti'); endCall(false); }
+    else if(data.status === 'ended'){ endCall(false); }
   });
-}, (err) => { console.error(err); });
+  call.timer = setTimeout(() => {
+    if(call && call.role === 'caller' && !call.connected && !call.gotAnswer){ toast('Cevap vermedi'); endCall(true); }
+  }, 45000);
+}
 
-/* ---------- başlangıç ---------- */
-applyAvatar($("me-btn"), myId, myName);
-if(myName){ saveMe(); } else { showNameScreen(); }
-setInterval(() => { if(!document.hidden && myName) saveMe(true); }, 60000);
-renderHome();
+function endCall(notifyRemote){
+  if(!call) return;
+  const c = call; call = null;
+  clearTimeout(c.timer); clearInterval(c.tick);
+  if(c.unsub) c.unsub();
+  try{ c.pc.close(); }catch(e){}
+  c.stream.getTracks().forEach(t => t.stop());
+  if(notifyRemote) c.ref.set({status:'ended'}, {merge:true}).catch(()=>{});
+  $('callUI').classList.add('hidden');
+  $('remoteV').srcObject = null; $('localV').srcObject = null;
+}
+
+function listenCalls(){
+  unsubCalls = db.collection('v2calls').where('to','==',me).where('status','==','ringing').onSnapshot(s => {
+    s.docChanges().forEach(ch => {
+      if(ch.type === 'added'){
+        const d = ch.doc.data();
+        if(Date.now() - d.t > 60000) return;
+        if(call || incoming){ ch.doc.ref.set({status:'declined'}, {merge:true}).catch(()=>{}); return; }
+        incoming = {id: ch.doc.id, ref: ch.doc.ref, data: d};
+        const nm = d.fromName || d.from;
+        $('incName').textContent = nm;
+        $('incAv').textContent = initial(nm);
+        $('incType').textContent = d.type === 'video' ? 'Görüntülü arıyor…' : 'Sesli arıyor…';
+        $('incoming').classList.remove('hidden');
+        if(navigator.vibrate) navigator.vibrate([400,200,400,200,400]);
+      } else if(ch.type === 'removed' && incoming && incoming.id === ch.doc.id){
+        incoming = null; $('incoming').classList.add('hidden');
+      }
+    });
+  });
+}
+$('declineBtn').onclick = () => {
+  if(!incoming) return;
+  incoming.ref.set({status:'declined'}, {merge:true}).catch(()=>{});
+  incoming = null; $('incoming').classList.add('hidden');
+};
+$('acceptBtn').onclick = async () => {
+  if(!incoming) return;
+  const inc = incoming; incoming = null;
+  $('incoming').classList.add('hidden');
+  let stream;
+  try{ stream = await getMedia(inc.data.type === 'video'); }
+  catch(e){ toast('Mikrofon / kamera izni gerekli'); inc.ref.set({status:'declined'}, {merge:true}).catch(()=>{}); return; }
+  call = {role:'callee', ref: inc.ref, stream, idx:0, type: inc.data.type, friend: inc.data.from};
+  call.pc = makePc(stream, false, inc.ref);
+  $('localV').srcObject = stream;
+  showCallUI(inc.data.fromName || inc.data.from, inc.data.type); setCallStatus('Bağlanıyor…');
+  try{
+    await call.pc.setRemoteDescription(inc.data.offer);
+    const ans = await call.pc.createAnswer();
+    await call.pc.setLocalDescription(ans);
+    await inc.ref.set({answer:{type: ans.type, sdp: ans.sdp}, status:'active'}, {merge:true});
+  }catch(e){ toast('Arama açılamadı'); endCall(true); return; }
+  call.unsub = inc.ref.onSnapshot(d => {
+    const data = d.data();
+    if(!data || !call) return;
+    applyCands(data);
+    if(data.status === 'ended' || data.status === 'declined') endCall(false);
+  });
+};
+$('hangBtn').onclick = () => endCall(true);
+$('muteBtn').onclick = () => {
+  if(!call) return;
+  const tr = call.stream.getAudioTracks()[0];
+  if(!tr) return;
+  tr.enabled = !tr.enabled;
+  $('muteBtn').classList.toggle('off', !tr.enabled);
+  $('muteBtn').textContent = tr.enabled ? '🎤' : '🔇';
+};
+$('callA').onclick = () => startCall('audio');
+$('callV').onclick = () => startCall('video');
+
+// ====== Açılış ======
+const saved = localStorage.getItem('ark_name');
+if(saved){ $('nameIn').value = saved; start(saved, slug(saved)); }
 </script>
 </body>
-  </html>
+</html>
